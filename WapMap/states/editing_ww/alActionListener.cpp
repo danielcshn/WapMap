@@ -26,7 +26,7 @@ namespace State {
         if (actionEvent.getSource() == m_hOwn->winLogicBrowser) {
             //m_hOwn->SyncLogicBrowser();
         } else if (actionEvent.getSource() == m_hOwn->butbrlRename) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             const auto& ret = State::InputDialog(PRODUCT_NAME, GETL2S("Win_LogicBrowser", "DialogInputName"), ST_DIALOG_BUT_OKCANCEL, logic->GetName());
             if (ret.value == RETURN_OK) {
                 if (ret.data.empty()) {
@@ -57,7 +57,7 @@ namespace State {
                 }
             }
         } else if (actionEvent.getSource() == m_hOwn->butbrlBrowseDir) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             std::filesystem::path path = logic->GetPath();
             path.remove_filename();
             ShellExecute(hge->System_GetState(HGE_HWND), "explore", "", "", path.generic_string().c_str(), SW_SHOWNORMAL);
@@ -81,10 +81,10 @@ namespace State {
                 }
             }
         } else if (actionEvent.getSource() == m_hOwn->butbrlEdit) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             m_hOwn->hDataCtrl->OpenCodeEditor(logic);
         } else if (actionEvent.getSource() == m_hOwn->butbrlDelete) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             std::string path = logic->GetPath();
             if (GV->fntMyriad16->GetStringWidth(path.c_str()) > 345) {
                 do {
@@ -334,7 +334,7 @@ namespace State {
                         strcpy(imgset, ani->GetImageset());
                     if (strlen(imgset) == 0) {
                         const char *id = m_hOwn->hAniBank->GetAssetByIterator(
-                                m_hOwn->dbAssetsAni->getSelected())->GetID();
+                                m_hOwn->dbAssetsAni->getSelected())->GetName();
                         char *idreplace =
                                 m_hOwn->hParser->GetGame() == WWD::Game_Gruntz ? SHR::Replace(id, "IMAGEZ_", "")
                                                                                : SHR::Replace(id, "IMAGES_", "");
@@ -865,7 +865,8 @@ namespace State {
                 }
             } else if (actionEvent.getSource() == m_hOwn->advcon_Container) {
                 if (m_hOwn->advcon_Container->GetSelectedID() == OBJMENU_ADV_CONTAINER_RAND) {
-                    bool bstacked = (strstr(m_hOwn->vObjectsPicked[0]->GetLogic(), "Stacked") != 0);
+                    bool bstacked = strstr(m_hOwn->vObjectsPicked[0]->GetLogic(), "Stacked") != 0 ||
+                                    strstr(m_hOwn->vObjectsPicked[0]->GetLogic(), "Statue") != 0;
                     int randc = 1;
                     if (bstacked) {
                         bool typicalcnt = (hge->Random_Int(0, 10) < 8);
@@ -1252,6 +1253,7 @@ namespace State {
                     case EWW_TOOL_BRUSHOBJECT:
                     case EWW_TOOL_ALIGNOBJ:
                     case EWW_TOOL_SPACEOBJ:
+                    case EWW_TOOL_ZOOM:
                         m_hOwn->SetTool(EWW_TOOL_NONE);
                         break;
                     case EWW_TOOL_MOVEOBJECT:
@@ -1408,6 +1410,7 @@ namespace State {
     }
 
     void EditingWWMainListener::keyReleased(KeyEvent &keyEvent) {
+        if (keyEvent.isConsumed()) return;
         if (keyEvent.getKey() == Key::SPACE && !m_hOwn->bDragDropScroll) {
             if (m_hOwn->iActiveTool == EWW_TOOL_ZOOM) {
                 GV->SetCursor(keyEvent.isAltPressed() ? ZOOM_OUT : ZOOM_IN);

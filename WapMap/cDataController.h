@@ -5,6 +5,7 @@
 #include "../shared/cPID.h"
 #include "cFileSystem.h"
 #include <hge.h>
+#include "guichan/listmodel.hpp"
 
 namespace PID {
     class Palette;
@@ -14,11 +15,19 @@ namespace PID {
 #define DB_FEED_DISC   1
 #define DB_FEED_CUSTOM 2
 
+#define cDC_STANDARD 0
+#define cDC_CUSTOM   1
+
+class cAsset;
+
 class cAssetPackage;
 
 class cParallelLoop;
 
+template<typename T>
 class cAssetBank;
+
+class cDataController;
 
 struct cFile {
     cFileFeed *hFeed;
@@ -30,54 +39,50 @@ private:
     cFile _hFile;
 protected:
     std::string _strHash, _strName;
-    cAssetPackage *hParent;
-    bool _bLoaded;
-    time_t _iLoadedDate;
-    time_t _iLastDate;
-    unsigned int _iFileSize;
-    cAssetBank *_hBank;
-    bool _bForceReload;
+    cAssetPackage *hParent = 0;
+    bool _bLoaded = false;
+    time_t _iLoadedDate = 0;
+    time_t _iLastDate = 0;
+    unsigned int _iFileSize = 0;
+    cAssetBank<cAsset> *_hBank = 0;
+    bool _bForceReload = false;
+
+    friend class cBankPalettes;
 public:
-    cAsset();
+    virtual ~cAsset() {}
 
-    virtual ~cAsset();
+    const char *GetName() { return _strName.c_str(); }
 
-    const char *GetName() { return _strName.c_str(); };
-
-    cFile GetFile() { return _hFile; };
+    cFile& GetFile() { return _hFile; }
 
     void SetFile(cFile nFile);
 
-    unsigned int GetFileSize() { return _iFileSize; };
+    unsigned int GetFileSize() { return _iFileSize; }
 
-    bool IsLoaded() { return _bLoaded; };
+    bool IsLoaded() { return _bLoaded; }
 
-    void SetFileModTime(time_t tTime) { _iLastDate = tTime; };
+    void SetFileModTime(time_t tTime) { _iLastDate = tTime; }
 
-    std::string GetHash() { return _strHash; };
+    std::string GetHash() { return _strHash; }
 
-    bool IsActual() { return _bLoaded && (_iLoadedDate != 0 && _iLoadedDate == _iLastDate || _iLoadedDate == 0); };
+    bool IsActual() { return _bLoaded && (_iLoadedDate != 0 && _iLoadedDate == _iLastDate || _iLoadedDate == 0); }
 
-    virtual void Load() {};
+    virtual void Load() = 0;
 
-    virtual void Unload() {};
+    virtual void Unload() = 0;
 
-    virtual void Reload();
+    void Reload();
 
-    void SetPackage(cAssetPackage *ptr) { hParent = ptr; };
+    void SetPackage(cAssetPackage *ptr) { hParent = ptr; }
 
-    cAssetPackage *GetPackage() { return hParent; };
+    cAssetPackage *GetPackage() { return hParent; }
 
-    virtual std::string GetMountPoint() { return ""; };
+    cAssetBank<cAsset> *GetAssignedBank() { return _hBank; }
 
-    cAssetBank *GetAssignedBank() { return _hBank; };
+    void SetForceReload(bool b) { _bForceReload = b; }
 
-    void SetForceReload(bool b) { _bForceReload = b; };
-
-    bool NeedReload() { return _bForceReload; };
+    bool NeedReload() { return _bForceReload; }
 };
-
-class cDataController;
 
 struct cDC_MountEntry {
     std::vector<cFile> vFiles;
@@ -85,7 +90,8 @@ struct cDC_MountEntry {
     cAsset *hAsset;
 };
 
-class cAssetBank {
+template<typename T>
+class cAssetBank : public gcn::ListModel {
 private:
     bool _bModFlag;
     int _iModNew, _iModChange, _iModDel;
@@ -93,25 +99,35 @@ private:
     friend class cDataController;
 
 protected:
-    WWD::Parser *hParser;
+    cDataController *hDC;
+    std::vector<T *> m_vAssets;
 
 public:
-    cAssetBank(WWD::Parser * hParser) : hParser(hParser) {};
+    cAssetBank(cDataController * hDC) : _bModFlag(false), _iModNew(0), _iModChange(0), _iModDel(0), hDC(hDC) {}
 
-    virtual void DeleteAsset(cAsset *hAsset) {};
+    ~cAssetBank() override {
+        for (int i = 0; i < m_vAssets.size(); i++) {
+            delete m_vAssets[i];
+        }
+    }
 
-    virtual const std::string& GetFolderName() {
-        static const std::string name;
-        return name;
-    };
+    T *GetAssetByIterator(int iIT) { return m_vAssets[iIT]; }
 
-    virtual void BatchProcessStart(cDataController *hDC) {};
+    std::string getElementAt(int i) override { return m_vAssets[i]->GetName(); }
 
-    virtual void BatchProcessEnd(cDataController *hDC) {};
+    int getNumberOfElements() override { return m_vAssets.size(); }
 
-    virtual std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) { return ""; };
+    virtual void DeleteAsset(T *hAsset) = 0;
 
-    virtual cAsset *AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry) { return NULL; };
+    virtual const std::string& GetFolderName() = 0;
+
+    virtual void BatchProcessStart() {};
+
+    virtual void BatchProcessEnd() {};
+
+    virtual std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) = 0;
+
+    virtual T *AllocateAssetForMountPoint(cDC_MountEntry mountEntry) = 0;
 
     bool GetModFlag() { return _bModFlag; };
 
@@ -124,16 +140,14 @@ public:
 
 class cAssetPackage {
 private:
-    int iLoadPolicy;
+    int iLoadPolicy = cDC_STANDARD;
     std::string strPrefix, strPath;
     //std::vector<cAsset*> * hvAssetHeap;
     cDataController *hParent;
 
-    void Update(cAssetBank *hBank);
+    void Update(cAssetBank<cAsset> *hBank);
 
-    cAssetPackage(cDataController *parent);
-
-    ~cAssetPackage();
+    cAssetPackage(cDataController *parent) : hParent(parent) {}
 
     friend class cDataController;
 
@@ -182,9 +196,6 @@ public:
     cImageInfo GetImageInfo() { return imgInfo; };
 };
 
-#define cDC_STANDARD 0
-#define cDC_CUSTOM   1
-
 class cDataController {
 private:
     std::vector<cAssetPackage *> vhPackages;
@@ -192,11 +203,11 @@ private:
     std::string strGameDir, strFileDir, strFilename;
     cRezFeed *hREZ;
     cDiscFeed *hDisc, *hCustom;
-    std::vector<cAssetBank *> vhBanks;
+    std::vector<cAssetBank<cAsset> *> vhBanks;
     PID::Palette *hPalette;
     cParallelLoop *hLooper;
     float fFeedRefreshTime;
-    WWD::GAME game;
+    WWD::Parser* hParser;
 
     std::vector<cDC_MountEntry> vMountEntries;
 
@@ -205,7 +216,7 @@ private:
     void _SortMountEntry(size_t id);
 
 public:
-    cDataController(WWD::GAME game, std::string strGD, std::string strFD, std::string strFN);
+    cDataController(WWD::Parser* hParser, std::string strGD, std::string strFD, std::string strFN);
 
     ~cDataController();
 
@@ -225,20 +236,24 @@ public:
 
     std::vector<cFile> GetFilesList(std::string strPath, int iLoadPolicy);
 
-    void RegisterAssetBank(cAssetBank *hPtr);
+    template<typename T>
+    void RegisterAssetBank(cAssetBank<T> *hPtr) {
+        vhBanks.push_back((cAssetBank<cAsset>*) hPtr);
+    }
 
-    std::vector<cAssetBank *> GetBanks() { return vhBanks; };
+    WWD::GAME GetGame() { return hParser->GetGame(); }
+    int GetBaseLevel() { return hParser->GetBaseLevel(); }
 
-    bool SetPalette(std::string strPath);
+    std::vector<cAssetBank<cAsset> *> GetBanks() { return vhBanks; }
 
-    PID::Palette *GetPalette() { return hPalette; };
+    void SetPalette(PID::Palette * palette) { hPalette = palette; }
+    PID::Palette *GetPalette() { return hPalette; }
 
     bool IsLoadableImage(cFile hFile, cImageInfo *inf = 0, cImageInfo::Level iInfoLevel = cImageInfo::Full);
 
     byte *GetImageRaw(cFile hFile, int *w, int *h, PID::Palette** pal);
 
-    bool
-    RenderImageRaw(byte *hData, HTEXTURE texDest, int iRx, int iRy, int iRowSpan, int w, int h, PID::Palette *pal = 0);
+    bool RenderImageRaw(byte *hData, HTEXTURE texDest, int iRx, int iRy, int iRowSpan, int w, int h, PID::Palette *pal = 0);
 
     bool RenderImage(cFile hFile, HTEXTURE texDest, int iRx, int iRy, int iRowSpan);
 
@@ -252,7 +267,7 @@ public:
 
     void OpenCodeEditor(class cCustomLogic *logic);
 
-    cFile AssignFileForLogic(std::string strLogicName);
+    cFile AssignFileForLogic(const std::string& strLogicName);
 
     void Think();
 
@@ -260,7 +275,7 @@ public:
 
     void UnmountFile(std::string strMountPoint, cFile hFile);
 
-    cAssetPackage *GetAssetPackageByFile(cFile hFile);
+    cAssetPackage *GetAssetPackageByFile(const cFile& hFile);
 
     int GetMountPointID(std::string strMountPoint);
 

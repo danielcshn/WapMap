@@ -16,18 +16,16 @@ namespace SHR {
         mHasMouse = 0;
         fFocusTimer = 0;
         fButtonTimer = 0;
-        mText = defText;
         mScrollDisabled = 0;
         setWidth(100);
         setFocusable(true);
+        mFlipDirection = false;
         mDroppedDown = false;
         mPushed = false;
         mIsDragged = false;
         mCaretPosition = 0;
         mXScroll = 0;
         bMarkedInvalid = 0;
-
-        setInternalFocusHandler(&mInternalFocusHandler);
 
         mInternalScrollArea = (scrollArea == NULL);
         mInternalListBox = (listBox == NULL);
@@ -51,6 +49,7 @@ namespace SHR {
         mListBox->addSelectionListener(this);
 
         setListModel(listModel);
+        mText = defText;
 
         if (mListBox->getSelected() < 0) {
             mListBox->setSelected(0);
@@ -61,6 +60,8 @@ namespace SHR {
         addFocusListener(this);
 
         adjustHeight();
+
+        setInternalFocusHandler(&mInternalFocusHandler);
     }
 
     TextDropDown::~TextDropDown() {
@@ -88,6 +89,20 @@ namespace SHR {
         float mx, my;
         hge->Input_GetMousePos(&mx, &my);
 
+        if (mDroppedDown) {
+            // Draw a border around the children.
+            graphics->setColor(0x000000);
+            graphics->drawRectangle(gcn::Rectangle(0,
+                                                   mFlipDirection ? 0 : mFoldedUpHeight,
+                                                   getWidth(),
+                                                   getHeight() - mFoldedUpHeight));
+            drawChildren(graphics);
+
+            if (mFlipDirection) {
+                y += getHeight() - mFoldedUpHeight;
+            }
+        }
+
         bool buttonfoc = (isEnabled() && mHasMouse && mx > x + getWidth() - 20 && mx < x + getWidth() && my > y &&
                           my < y + h);
 
@@ -111,8 +126,6 @@ namespace SHR {
             fFocusTimer -= hge->Timer_GetDelta();
             if (fFocusTimer < 0.0f) fFocusTimer = 0.0;
         }
-
-        ClipRectangle rect = graphics->getCurrentClipArea();
 
         renderFrame(x, y, getWidth(), h, getAlpha(), 0);
         if (fFocusTimer > 0)
@@ -147,15 +160,19 @@ namespace SHR {
             drawCaret(graphics, GV->fntMyriad16->GetStringWidth(mText.substr(0, mCaretPosition).c_str(), false, true) - mXScroll);
         }
         graphics->popClipArea();
+    }
 
-        if (mDroppedDown) {
-            // Draw a border around the children.
-            graphics->setColor(0x000000);
-            graphics->drawRectangle(gcn::Rectangle(0,
-                                                   mFoldedUpHeight,
-                                                   getWidth(),
-                                                   getHeight() - mFoldedUpHeight));
-            drawChildren(graphics);
+    void TextDropDown::logic() {
+        logicChildren();
+
+        if (mIsDragged) {
+            int x, y;
+            float mx, my;
+            getAbsolutePosition(x, y);
+            hge->Input_GetMousePos(&mx, &my);
+
+            if (mx - x < 0 && mXScroll > 0) mXScroll--;
+            else if (mx - x > getWidth() && mXScroll < getFont()->getWidth(mText) - getWidth() + 29) mXScroll++;
         }
     }
 
@@ -173,6 +190,7 @@ namespace SHR {
             return;
         }
 
+        bool shouldFixScroll = true;
         if (key.getValue() == Key::DOWN) {
             dropDown();
             keyEvent.consume();
@@ -229,6 +247,9 @@ namespace SHR {
                 mCaretPosition = 0;
                 mSelectionPosition = -1;
             }
+
+            mXScroll = 0;
+            shouldFixScroll = false;
         } else if (key.getValue() == Key::END) {
             if (keyEvent.isShiftPressed()) {
                 mSelectionPosition = mText.size();
@@ -236,6 +257,9 @@ namespace SHR {
                 mCaretPosition = mText.size();
                 mSelectionPosition = -1;
             }
+
+            mXScroll = std::max(0, getFont()->getWidth(mText) - getWidth() + 29);
+            shouldFixScroll = false;
         } else if (key.getValue() == 'v' && keyEvent.isControlPressed()) { //paste
             if (bSelection) deleteSelection();
             int pastepos = mCaretPosition;
@@ -289,73 +313,70 @@ namespace SHR {
             keyEvent.consume();
         }
 
-        fixScroll();
+        if (shouldFixScroll) {
+            fixScroll();
+        }
     }
 
     void TextDropDown::mouseMoved(MouseEvent &mouseEvent) {
         if (isEnabled() && mouseEvent.getX() < getWidth() - 22) {
-            GV->SetCursor(TEXT);
+            if (mFlipDirection ? mouseEvent.getY() > getHeight() - mFoldedUpHeight : mouseEvent.getY() < mFoldedUpHeight)
+                GV->SetCursor(TEXT);
         }
     }
 
     void TextDropDown::mousePressed(MouseEvent &mouseEvent) {
+        if (mouseEvent.getSource() != this) return;
+
         int x = mouseEvent.getX(),
-            y = mouseEvent.getY();
+            y = mouseEvent.getY(),
+            h = getHeight();
 
-        if (mouseEvent.getSource() == this) {
+        // If we have a mouse press outside the widget
+        if (0 > y
+            || y >= h
+            || x < 0
+            || x >= getWidth()) {
+            mPushed = false;
+            foldUp();
+            bTextFocused = false;
+            return;
+        }
 
-            // If we have a mouse press on the widget.
-            if (y >= 0
-                && y < getHeight()
-                && x >= 0
-                && x < getWidth()
-                && mouseEvent.getButton() == MouseEvent::LEFT
-                && !mDroppedDown) {
-                if (x < getWidth() - 22) {
-                    mCaretPosition = getFont()->getStringIndexAt(mText, x + mXScroll);
-                    fixScroll();
-                    bTextFocused = true;
-                    GV->SetCursor(TEXT);
-                }
-                else {
-                    bTextFocused = false;
-                    mCaretPosition = -1;
-                    mPushed = true;
-                    dropDown();
-                    requestModalMouseInputFocus();
-                }
-                mSelectionPosition = -1;
-            }
-            // Fold up the listbox if the upper part is clicked after fold down
-            else if (y >= 0
-                && y < mFoldedUpHeight
-                && x >= 0
-                && x < getWidth()
-                && mouseEvent.getButton() == MouseEvent::LEFT
-                && mDroppedDown) {
-                if (x < getWidth() - 22) {
-                    bTextFocused = true;
-                    GV->SetCursor(TEXT);
-                }
-                mPushed = false;
-                foldUp();
-                releaseModalMouseInputFocus();
-            }
-            // If we have a mouse press outside the widget
-            else if (0 > y
-                || y >= getHeight()
-                || x < 0
-                || x >= getWidth()) {
-                mPushed = false;
-                foldUp();
+        if (mouseEvent.getButton() != MouseEvent::LEFT) return;
+
+        // If we have a mouse press on the widget.
+        if (!mDroppedDown) {
+            if (x < getWidth() - 22 && (mFlipDirection ? y > h - mFoldedUpHeight : y < mFoldedUpHeight)) {
+                mCaretPosition = getFont()->getStringIndexAt(mText, x + mXScroll);
+                fixScroll();
+                bTextFocused = true;
+                GV->SetCursor(TEXT);
+            } else {
                 bTextFocused = false;
+                mCaretPosition = -1;
+                mPushed = true;
+                dropDown();
+                requestModalMouseInputFocus();
             }
+            mSelectionPosition = -1;
+        }
+        // Fold up the listbox if the upper part is clicked after fold down
+        else if (mFlipDirection ? y > h - mFoldedUpHeight : y < mFoldedUpHeight) {
+            if (x < getWidth() - 22) {
+                bTextFocused = true;
+                GV->SetCursor(TEXT);
+            }
+            mPushed = false;
+            foldUp();
+            releaseModalMouseInputFocus();
         }
     }
 
     void TextDropDown::mouseReleased(MouseEvent &mouseEvent) {
         int x = mouseEvent.getX(),
-            y = mouseEvent.getY();
+            y = mouseEvent.getY(),
+            h = getHeight();
 
         if (mIsDragged) {
             mPushed = false;
@@ -363,7 +384,7 @@ namespace SHR {
 
         // Released outside of widget. Can happen when we have modal input focus.
         if ((0 > y
-             || y >= getHeight()
+             || y >= h
              || x < 0
              || x >= getWidth())
             && mouseEvent.getButton() == MouseEvent::LEFT
@@ -375,7 +396,7 @@ namespace SHR {
 
         mIsDragged = false;
 
-        if (isEnabled() && mouseEvent.getX() < getWidth() - 22) {
+        if (isEnabled() && mouseEvent.getX() < getWidth() - 22 && (mFlipDirection ? y > h - mFoldedUpHeight : y < mFoldedUpHeight)) {
             GV->SetCursor(TEXT);
         }
     }
@@ -384,15 +405,12 @@ namespace SHR {
         mIsDragged = true;
         if (mText.length() != 0) {
             mSelectionPosition = getFont()->getStringIndexAt(mText, mouseEvent.getX() + mXScroll);
-            fixScroll();
         }
 
-        int h = (mDroppedDown ? mFoldedUpHeight : getHeight());
         int x, y;
         getAbsolutePosition(x, y);
 
-        if (isEnabled() && mHasMouse && !(mouseEvent.getX() > x + getWidth() - 20
-                && mouseEvent.getX() < x + getWidth() && mouseEvent.getY() > y && mouseEvent.getY() < y + h)) {
+        if (isEnabled() && mHasMouse && mouseEvent.getX() < x + getWidth() - 20 && (mFlipDirection ? y > getHeight() - mFoldedUpHeight : y < mFoldedUpHeight)) {
             GV->SetCursor(TEXT);
         }
 
@@ -433,7 +451,7 @@ namespace SHR {
         // seperating the selected element view and the scroll area.
 
         if (mDroppedDown && getParent()) {
-            int h = getParent()->getHeightEx() - 20 - getY();
+            int h = mFlipDirection ? getY() - 20 : getParent()->getHeightEx() - 20 - getY();
 
             if (listBoxHeight > h - h2 - 2) {
                 mScrollArea->setHeight(h - h2 - 2);
@@ -459,6 +477,10 @@ namespace SHR {
             if (getParent()) {
                 getParent()->moveToTop(this);
             }
+
+            if (mFlipDirection) {
+                setPosition(mDimension.x, mDimension.y - getHeight() + mFoldedUpHeight);
+            }
         }
 
         mListBox->requestFocus();
@@ -471,6 +493,10 @@ namespace SHR {
 
     void TextDropDown::foldUp() {
         if (mDroppedDown) {
+            if (mFlipDirection) {
+                setPosition(mDimension.x, mDimension.y + getHeight() - mFoldedUpHeight);
+            }
+
             mDroppedDown = false;
             adjustHeight();
             mInternalFocusHandler.focusNone();
@@ -478,7 +504,6 @@ namespace SHR {
     }
 
     void TextDropDown::focusLost(const FocusEvent& event) {
-        Widget* source = event.getSource();
         foldUp();
         mInternalFocusHandler.focusNone();
         bTextFocused = false;
@@ -510,7 +535,7 @@ namespace SHR {
         if (mDroppedDown) {
             // Calculate the children area (with the one pixel border in mind)
             return gcn::Rectangle(1,
-                                  mFoldedUpHeight + 1,
+                                  (mFlipDirection ? 0 : mFoldedUpHeight) + 1,
                                   getWidth() - 2,
                                   getHeight() - mFoldedUpHeight - 2);
         }

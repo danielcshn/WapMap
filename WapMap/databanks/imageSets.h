@@ -3,18 +3,13 @@
 
 #include <vector>
 #include "hgeSprite.h"
-#include "../shared/cREZ.h"
 #include "../shared/cWWD.h"
-#include "../shared/cPID.h"
-#include "../shared/cProgressInfo.h"
-#include "guichan/listmodel.hpp"
 
 #include "../cDataController.h"
+#include "../cTextureAtlas.h"
 
 #define SPRBANK_TEXJUMPVIOLATION 0
 #define SPRBANK_TEXLOCKVIOLATION 1
-
-class cTextureAtlaser;
 
 class cBankImageSet;
 
@@ -26,40 +21,39 @@ private:
     int m_iID;
     int m_iIT;
 
-    cSprBankAssetIMG(int it, cBankImageSet *par, cSprBankAsset *is, int id);
+    cSprBankAssetIMG(cFile file, int it, cBankImageSet *par, cSprBankAsset *is, int id);
 
-    ~cSprBankAssetIMG();
+    ~cSprBankAssetIMG() override;
 
 public:
-    hgeSprite *GetSprite() { return imgSprite; };
+    hgeSprite *GetSprite() { return imgSprite; }
+
+    void RenderToTexture();
 
     int GetID() { return m_iID; };
 
     int GetIt() { return m_iIT; };
 
-    virtual void Load();
+    void Load() override;
 
-    virtual void Unload();
+    void Unload() override;
 
-    virtual std::string GetMountPoint();
+    std::string GetMountPoint();
 
     friend class cBankImageSet;
 
     friend class cSprBankAsset;
 };
 
-class cSprBankAsset {
+class cSprBankAsset : public cAsset {
 protected:
-    std::string strID;
     std::string strHash;
     std::vector<cSprBankAssetIMG *> m_vSprites;
-    int m_iSize;
-    int m_iMaxID;
+    int m_iSize = 0;
+    int m_iMaxID = 0;
     int m_iMaxWidth = 0, m_iMaxHeight = 0;
 
-    cSprBankAsset(std::string id);
-
-    ~cSprBankAsset();
+    cSprBankAsset(std::string id) { _strName = id; }
 
     void DeleteIMG(cSprBankAssetIMG *img);
 
@@ -67,7 +61,10 @@ protected:
 
     friend class cBankImageSet;
 	friend class cSprBankAssetIMG;
+
 public:
+    ~cSprBankAsset() override;
+
     cSprBankAssetIMG *GetIMGByIterator(int it);
 
     cSprBankAssetIMG *GetIMGByID(int id);
@@ -82,37 +79,34 @@ public:
 
     int GetSpritesCount() { return m_vSprites.size(); };
 
-    const char *GetID() { return strID.c_str(); };
+    const char *GetID() { return _strName.c_str(); };
 
     int GetSize() { return m_iSize; };
+
+    int GetIndexOf(cSprBankAssetIMG* img) {
+        for (int i = 0; i < m_vSprites.size(); i++) { if (img == m_vSprites[i]) return i; }
+        return -1;
+    };
 
     std::string GetHash() { return strHash; };
 
     void SortAndFixIterators();
 
     void UpdateHash();
+
+    void Load() override {}
+
+    void Unload() override {}
 };
 
-class cBankImageSet : public gcn::ListModel, public cAssetBank {
+class cBankImageSet : public cAssetBank<cSprBankAsset> {
 private:
-    cTextureAtlaser *myAtlaser;
-    std::vector<cSprBankAsset *> m_vAssets;
-    int m_iAssetsSize;
-
+    cTextureAtlaser atlaser;
+    friend class cSprBankAssetIMG;
 public:
-    cBankImageSet(WWD::Parser *hParser);
-
-    ~cBankImageSet();
-
-    cTextureAtlaser *GetTextureAtlaser() { return myAtlaser; };
+    explicit cBankImageSet(cDataController *hDC) : cAssetBank<cSprBankAsset>(hDC) {}
 
     cSprBankAsset *GetAssetByID(const char *pszID);
-
-    cSprBankAsset *GetAssetByIterator(int iIT) { return m_vAssets[iIT]; }
-
-    int GetAssetsCount() { return m_vAssets.size(); };
-
-    int GetAssetsSize() { return m_iAssetsSize; };
 
     void SortAssets();
 
@@ -124,28 +118,25 @@ public:
 
     WWD::Rect GetSpriteRenderRect(hgeSprite *spr);
 
-    //inherited from listmodel
-    std::string getElementAt(int i);
-
-    int getNumberOfElements();
-
     static bool canReadExtension(const char* ext);
 
-    virtual void BatchProcessStart(cDataController *hDC);
+    void RedrawAssets();
 
-    virtual void BatchProcessEnd(cDataController *hDC);
+    void BatchProcessStart() override;
+
+    void BatchProcessEnd() override;
 
     const std::string& GetFolderName() override {
         static const std::string name = "IMAGES";
         static const std::string namez = "IMAGEZ";
-        return hParser->GetGame() == WWD::Game_Gruntz ? namez : name;
+        return hDC->GetGame() == WWD::Game_Gruntz ? namez : name;
     };
 
-    virtual std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix);
+    std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) override;
 
-    virtual cAsset *AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry);
+    cSprBankAsset *AllocateAssetForMountPoint(cDC_MountEntry mountEntry) override;
 
-    virtual void DeleteAsset(cAsset *hAsset);
+    void DeleteAsset(cSprBankAsset *hAsset) override;
 };
 
 #endif

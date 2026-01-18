@@ -25,6 +25,10 @@ class cBankSound;
 
 class cBankAni;
 
+class cBankMeta;
+
+class cBankPalettes;
+
 class cDataController;
 
 class cMDI;
@@ -67,6 +71,8 @@ struct DocumentData {
     cBankAni *hAniBank;
     cBankTile *hTilesBank;
     cBankLogic *hCustomLogicBank;
+    cBankMeta* hMetaBank;
+    cBankPalettes* hPalettesBank;
     char *hTileClipboardImageSet;
     int iTileCBw, iTileCBh;
     WWD::Tile *hTileClipboard;

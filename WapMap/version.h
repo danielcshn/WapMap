@@ -2,8 +2,8 @@
 #define VERSION_H
 
 #define MAJOR_VERSION 0
-#define MINOR_VERSION 4
-#define PATCH_VERSION 3
+#define MINOR_VERSION 5
+#define PATCH_VERSION 0
 #define WA_VER 39
 
 #define PRODUCT_NAME "WapMap"
@@ -15,9 +15,9 @@
 
 #define EXENAME INTERNAL_NAME
 #define WA_TITLEBAR PRODUCT_NAME " " APP_VERSION
-#define WA_VERSTRING "v" APP_VERSION " (b" TO_STR(WA_VER) ") 2010-2023"
+#define WA_VERSTRING "v" APP_VERSION " (b" TO_STR(WA_VER) ") 2010-2026"
 #define WA_VERPURE APP_VERSION
 
-#define WA_LANGVER 15
+#define WA_LANGVER 16
 
 #endif // !VERSION_H

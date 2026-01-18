@@ -181,7 +181,7 @@ winImageSetBrowser::winImageSetBrowser() : cWindow(GETL2S("Win_ImageSetBrowser",
 
 void winImageSetBrowser::Think() {
     cBankImageSet *bank = GV->editState->SprBank;
-    if (bank->GetAssetsCount() == 0)
+    if (bank->getNumberOfElements() == 0)
         return;
 
     if (bank->GetModFlag()) {
@@ -198,7 +198,7 @@ void winImageSetBrowser::Think() {
 
     if (mx > 6 && mx < CONST_IMGSETBROWSER_ISLISTW - 5 && my > 45 && my < 45 + 530) {
         int tsid = (my + saImageSets->getVerticalScrollAmount() - 50) / CONST_IMGSETBROWSER_LISTSETH;
-        iHighlightedIS = (tsid < bank->GetAssetsCount() ? tsid : -1);
+        iHighlightedIS = (tsid < bank->getNumberOfElements() ? tsid : -1);
     } else
         iHighlightedIS = -1;
 
@@ -210,7 +210,6 @@ void winImageSetBrowser::Think() {
     }
 
     cSprBankAsset *ts = bank->GetAssetByIterator((iSelectedImageSet));
-
 
     int tilePickX = dx + CONST_IMGSETBROWSER_ISLISTW + 15, tilePickW =
             myWin.getWidth() - (CONST_IMGSETBROWSER_ISLISTW + 15) - 16,
@@ -257,7 +256,6 @@ void winImageSetBrowser::Think() {
 
 void winImageSetBrowser::Draw(int piCode) {
     cBankImageSet *bank = GV->editState->SprBank;
-    cDataController *hDataCtrl = GV->editState->hDataCtrl;
     int dx, dy;
     myWin.getAbsolutePosition(dx, dy);
 
@@ -281,9 +279,9 @@ void winImageSetBrowser::Draw(int piCode) {
 
 
     hge->Gfx_SetClipping(dx + 8, dy + 51, CONST_IMGSETBROWSER_ISLISTW - 9, 520);
-    if (bank->GetAssetsCount() > 0) {
+    if (bank->getNumberOfElements() > 0) {
         int startSet = saImageSets->getVerticalScrollAmount() / CONST_IMGSETBROWSER_LISTSETH;
-        for (int i = startSet; i < bank->GetAssetsCount() &&
+        for (int i = startSet; i < bank->getNumberOfElements() &&
                                i < startSet + (saImageSets->getHeight() / CONST_IMGSETBROWSER_LISTSETH) + 2; i++) {
             int drawX = dx + 8;
             int drawY = dy + 40 + 10 + i * CONST_IMGSETBROWSER_LISTSETH - saImageSets->getVerticalScrollAmount();
@@ -326,7 +324,7 @@ void winImageSetBrowser::Draw(int piCode) {
             float fScale = 1;
             if (ico->GetWidth() > iPreviewDim || ico->GetHeight() > iPreviewDim) {
                 float fScaleX = float(iPreviewDim) / ico->GetWidth(),
-                        fScaleY = float(iPreviewDim) / ico->GetHeight();
+                      fScaleY = float(iPreviewDim) / ico->GetHeight();
                 fScale = (fScaleX < fScaleY ? fScaleX : fScaleY);
             }
             float ofx, ofy;
@@ -337,11 +335,11 @@ void winImageSetBrowser::Draw(int piCode) {
             ofy *= fScale;
             ico->RenderEx(drawX + 10 + iPreviewDim / 2 + ofx, drawY + 10 + iPreviewDim / 2 + ofy, 0, fScale, fScale);
 
-            int strw = CONST_IMGSETBROWSER_ISLISTW - (20 + iPreviewDim) - 10;
+            int strw = CONST_IMGSETBROWSER_ISLISTW - (20 + iPreviewDim) - 20;
             std::string str = ts->GetID();
             bool first = 1;
             while (GV->fntMyriad16->GetStringWidth(str.c_str(), 0) > strw) {
-                str.erase(str.length() - 2 - (!first * 3));
+                str.erase(str.length() - 1 - (!first * 3));
                 str.append("...");
                 first = 0;
             }
@@ -353,13 +351,11 @@ void winImageSetBrowser::Draw(int piCode) {
                                     ts->GetSpritesCount(), GETL2S("Win_ImageSetBrowser", "frames"));
         }
 
-        int tilePickX = dx + (CONST_IMGSETBROWSER_ISLISTW + 15), tilePickW =
-                myWin.getWidth() - (CONST_IMGSETBROWSER_ISLISTW + 15) - 16,
-                tilePickY = dy + 285, tilePickH = myWin.getHeight() - 290;
-        cSprBankAsset *tsPick = bank->GetAssetByIterator(iSelectedImageSet);
+        int tilePickX = dx + (CONST_IMGSETBROWSER_ISLISTW + 15),
+            tilePickW = myWin.getWidth() - (CONST_IMGSETBROWSER_ISLISTW + 15) - 16,
+            tilePickY = dy + 285, tilePickH = myWin.getHeight() - 290;
 
-        int tilesPerRow = (tilePickW / CONST_IMGSETBROWSER_FRAMEICOSIZE),
-            rowCount = tilePickH / (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20) + 2;
+        int tilesPerRow = (tilePickW / CONST_IMGSETBROWSER_FRAMEICOSIZE);
         int borderOffset = (tilePickW - (tilesPerRow * CONST_IMGSETBROWSER_FRAMEICOSIZE)) / 2;
         int scroll = saFrames->getVerticalScrollAmount();
         if (scroll < 0) scroll = 0;
@@ -370,9 +366,9 @@ void winImageSetBrowser::Draw(int piCode) {
         } else {
             int yPos = 0;
             for (int i = 0; i < 3; i++)
-                if (vtGroups[i].size() > 0) {
+                if (!vtGroups[i].empty()) {
                     int drawX = tilePickX + borderOffset,
-                            drawY = tilePickY + 10 - scroll + yPos;
+                        drawY = tilePickY + 10 - scroll + yPos;
                     const char *label = 0;
                     if (i == 0) label = GETL2S("Win_ImageSetBrowser", "GroupREZ");
                     else if (i == 1) label = GETL2S("Win_ImageSetBrowser", "GroupClaw");
@@ -398,10 +394,10 @@ void winImageSetBrowser::Synchronize() {
     cBankImageSet *bank = GV->editState->SprBank;
     cDataController *hDataCtrl = GV->editState->hDataCtrl;
 
-    if (bank->GetAssetsCount() == 0)
+    if (bank->getNumberOfElements() == 0)
         return;
 
-    if (iSelectedImageSet < 0 || iSelectedImageSet >= bank->GetAssetsCount())
+    if (iSelectedImageSet < 0 || iSelectedImageSet >= bank->getNumberOfElements())
         iSelectedImageSet = 0;
     cSprBankAsset *ts = bank->GetAssetByIterator(iSelectedImageSet);
     if (iSelectedFrame < 0 || iSelectedFrame >= ts->GetSpritesCount())
@@ -428,21 +424,21 @@ void winImageSetBrowser::Synchronize() {
     butRenameImageSet->setVisible(bCustomTS);
     butDeleteImageSet->setVisible(bCustomTS);
 
-    cSprBankAssetIMG *pickedtile = ts->GetIMGByIterator(iSelectedFrame);
+    cSprBankAssetIMG *img = ts->GetIMGByIterator(iSelectedFrame);
 
-    sprintf(tmp, "%d", pickedtile->GetID());
+    sprintf(tmp, "%d", img->GetID());
     labFrameIDV->setCaption(tmp);
     labFrameIDV->adjustSize();
 
-    if (pickedtile->GetImage()) {
-        sprintf(tmp, "%dx%d", int(pickedtile->GetImage()->GetWidth()), int(pickedtile->GetImage()->GetHeight()));
+    if (img->GetImage()) {
+        sprintf(tmp, "%dx%d", int(img->GetImage()->GetWidth()), int(img->GetImage()->GetHeight()));
         labImageDimV->setCaption(tmp);
     } else {
         labImageDimV->setCaption("-");
     }
     labImageDimV->adjustSize();
 
-    std::string strPath = pickedtile->GetFile().strPath;
+    std::string strPath = img->GetFile().strPath;
     size_t lslash = strPath.rfind('/');
     std::string fname = strPath.substr(lslash + 1),
             fpath = strPath.substr(0, lslash);
@@ -452,11 +448,11 @@ void winImageSetBrowser::Synchronize() {
     labImagePathV->setCaption(fpath);
     labImagePathV->adjustSize();
 
-    labFrameChecksumV->setCaption(pickedtile->GetHash());
+    labFrameChecksumV->setCaption(img->GetHash());
     labFrameChecksumV->adjustSize();
 
     const char *orig = "NULL";
-    cFileFeed *feed = pickedtile->GetFile().hFeed;
+    cFileFeed *feed = img->GetFile().hFeed;
     if (feed == hDataCtrl->GetFeed(DB_FEED_REZ))
         orig = GETL2S("Win_ImageSetBrowser", "OriginREZ");
     else if (feed == hDataCtrl->GetFeed(DB_FEED_DISC))
@@ -482,14 +478,18 @@ void winImageSetBrowser::Synchronize() {
      butImageDetails->setY(90);
     }*/
 
-    char *buf = SHR::FormatTimeFromUnix(
-            pickedtile->GetFile().hFeed->GetFileModTime(pickedtile->GetFile().strPath.c_str()));
-    labFrameModDateV->setCaption(buf);
+    if (feed) {
+        char *buf = SHR::FormatTimeFromUnix(
+                feed->GetFileModTime(img->GetFile().strPath.c_str()));
+        labFrameModDateV->setCaption(buf);
+        delete[] buf;
+    } else {
+        labFrameModDateV->setCaption("-");
+    }
     labFrameModDateV->adjustSize();
-    delete[] buf;
 
-    for (int i = 0; i < 3; i++)
-        vtGroups[i].clear();
+    for (auto & vtGroup : vtGroups)
+        vtGroup.clear();
 
     for (int i = 0; i < ts->GetSpritesCount(); i++) {
         cSprBankAssetIMG *t = ts->GetIMGByIterator(i);
@@ -501,29 +501,29 @@ void winImageSetBrowser::Synchronize() {
             vtGroups[2].push_back(t);
     }
 
-    bSingleGroup = 0;
-    hSingleGroup = 0;
-    if (vtGroups[0].size() > 0 && vtGroups[1].empty() && vtGroups[2].empty()) {
-        bSingleGroup = 1;
+    bSingleGroup = false;
+    hSingleGroup = NULL;
+    if (!vtGroups[0].empty() && vtGroups[1].empty() && vtGroups[2].empty()) {
+        bSingleGroup = true;
         hSingleGroup = &vtGroups[0];
-    } else if (vtGroups[0].empty() && vtGroups[1].size() > 0 && vtGroups[2].empty()) {
-        bSingleGroup = 1;
+    } else if (vtGroups[0].empty() && !vtGroups[1].empty() && vtGroups[2].empty()) {
+        bSingleGroup = true;
         hSingleGroup = &vtGroups[1];
-    } else if (vtGroups[0].empty() && vtGroups[1].empty() && vtGroups[2].size() > 0) {
-        bSingleGroup = 1;
+    } else if (vtGroups[0].empty() && vtGroups[1].empty() && !vtGroups[2].empty()) {
+        bSingleGroup = true;
         hSingleGroup = &vtGroups[2];
     }
 
-    conImageSets->setHeight((bank->GetAssetsCount() * CONST_IMGSETBROWSER_LISTSETH + 10));
+    conImageSets->setHeight((bank->getNumberOfElements() * CONST_IMGSETBROWSER_LISTSETH + 10));
 
     int tperrow = (myWin.getWidth() - (CONST_IMGSETBROWSER_ISLISTW + 15) - 16) / CONST_IMGSETBROWSER_FRAMEICOSIZE;
     if (bSingleGroup) {
         conFrames->setHeight((hSingleGroup->size() / tperrow + 1) * (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20) + 20);
     } else {
         int len = 0;
-        for (int i = 0; i < 3; i++)
-            if (vtGroups[i].size() > 0) {
-                len += (vtGroups[i].size() / tperrow + 1) * (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20) + 20;
+        for (const auto & vtGroup : vtGroups)
+            if (!vtGroup.empty()) {
+                len += (vtGroup.size() / tperrow + 1) * (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20) + 20;
             }
         conFrames->setHeight(len);
     }
@@ -536,7 +536,7 @@ void winImageSetBrowser::Open() {
 
 void winImageSetBrowser::action(const ActionEvent &actionEvent) {
     if (actionEvent.getSource() == butBrowseFolder) {
-        if (iSelectedImageSet) {
+        if (iSelectedImageSet != -1) {
             cFile f = GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet)->GetIMGByIterator(
                 iSelectedFrame)->GetFile();
             std::string filepath = f.hFeed->GetAbsoluteLocation() + "/" + f.strPath;
@@ -550,36 +550,48 @@ void winImageSetBrowser::action(const ActionEvent &actionEvent) {
             system(buf);
         }
     } else if (actionEvent.getSource() == butAddFrames) {
-        if (iSelectedImageSet) {
+        if (iSelectedImageSet != -1) {
             GV->StateMgr->Push(new State::ImageImport(State::ImageImportObject,
                 GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet)));
         }
     } else if (actionEvent.getSource() == butImportImageSet) {
         GV->StateMgr->Push(new State::ImageImport(State::ImageImportObject, 0));
     } else if (actionEvent.getSource() == butDeleteFrame) {
-        if (iSelectedImageSet && iSelectedFrame) {
-            cSprBankAssetIMG* t = GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet)->GetIMGByIterator(
-                iSelectedFrame);
-            if (iSelectedFrame == GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet)->GetSpritesCount() - 1)
+        if (iSelectedImageSet != -1 && iSelectedFrame != -1) {
+            cSprBankAsset* ts = GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet);
+            cSprBankAssetIMG* t = ts->GetIMGByIterator(iSelectedFrame);
+            int spritesCount = ts->GetSpritesCount() - 1;
+            if (iSelectedFrame == spritesCount)
                 iSelectedFrame--;
 
             std::string strPath = t->GetFile().hFeed->GetAbsoluteLocation() + "/" + t->GetFile().strPath;
-            if (remove(strPath.c_str()) != 0) {
+            if (std::filesystem::remove(strPath.c_str())) {
+                if (!spritesCount) {
+                    strPath = strPath.substr(0, strPath.rfind('/'));
+                    std::filesystem::remove(strPath.c_str());
+                }
+            } else {
                 GV->Console->Printf("~r~Failed to remove: ~w~%s", strPath.c_str());
             }
         }
     } else if (actionEvent.getSource() == butDeleteImageSet) {
-        if (iSelectedImageSet) {
+        if (iSelectedImageSet != -1) {
             cSprBankAsset* ts = GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet);
             cSprBankAssetIMG* fimg = ts->GetIMGByIterator(0);
+            int setsCount = GV->editState->SprBank->getNumberOfElements() - 1;
+            if (iSelectedImageSet == setsCount) {
+                --iSelectedImageSet;
+            }
 
             std::string strPath = GV->editState->hDataCtrl->GetFeed(DB_FEED_CUSTOM)->GetAbsoluteLocation() + "/" +
                 fimg->GetFile().strPath;
             strPath = strPath.substr(0, strPath.rfind('/'));
-            SHR::RemoveDirR(strPath.c_str());
+            if (!std::filesystem::remove_all(strPath)) {
+                GV->Console->Printf("~r~Failed to remove: ~w~%s", strPath.c_str());
+            }
         }
     } else if (actionEvent.getSource() == butImageDetails) {
-        if (iSelectedImageSet) {
+        if (iSelectedImageSet != -1) {
             GV->StateMgr->Push(new State::ImageDetails(
                 (cImage*)(GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet)->GetIMGByIterator(
                     iSelectedFrame))));
@@ -596,11 +608,12 @@ void winImageSetBrowser::RenderFrameGroup(std::vector<cSprBankAssetIMG *> tiles,
     int tilePickX, tilePickY, tilePickW, tilePickH;
     hge->Gfx_GetClipping(&tilePickX, &tilePickY, &tilePickW, &tilePickH);
     int tilesPerRow = tilePickW / CONST_IMGSETBROWSER_FRAMEICOSIZE;
+    GV->sprCheckboard->SetColor(0xFFFFFFFF);
     for (size_t i = 0; i < tiles.size(); i++) {
         int gridX = (i % tilesPerRow),
-                gridY = (i / tilesPerRow);
+            gridY = (i / tilesPerRow);
         int drawX = x + gridX * CONST_IMGSETBROWSER_FRAMEICOSIZE,
-                drawY = y + gridY * (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20);
+            drawY = y + gridY * (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20);
 
         cSprBankAssetIMG *tile = tiles[i];
 
@@ -630,8 +643,9 @@ void winImageSetBrowser::RenderFrameGroup(std::vector<cSprBankAssetIMG *> tiles,
 
         spr->SetColor(0xFFFFFFFF);
 
-        int clipY = std::max(drawY + 5, tilePickY), clipH =
-                std::min(drawY + 5 + iPreviewDim, tilePickY + tilePickH) - clipY;
+        int clipY = std::max(drawY + 5, tilePickY),
+            clipH = std::min(drawY + 5 + iPreviewDim, tilePickY + tilePickH) - clipY;
+
         if (clipH > 0) {
             hge->Gfx_SetClipping(drawX + 5, clipY, iPreviewDim, clipH);
             GV->sprCheckboard->Render(drawX + 5, drawY + 5);
@@ -641,9 +655,10 @@ void winImageSetBrowser::RenderFrameGroup(std::vector<cSprBankAssetIMG *> tiles,
         float fScale = 1;
         if (spr->GetWidth() > iPreviewDim || spr->GetHeight() > iPreviewDim) {
             float fScaleX = float(iPreviewDim) / spr->GetWidth(),
-                    fScaleY = float(iPreviewDim) / spr->GetHeight();
+                  fScaleY = float(iPreviewDim) / spr->GetHeight();
             fScale = (fScaleX < fScaleY ? fScaleX : fScaleY);
         }
+
         float ofx, ofy;
         spr->GetHotSpot(&ofx, &ofy);
         ofx -= spr->GetWidth() / 2;

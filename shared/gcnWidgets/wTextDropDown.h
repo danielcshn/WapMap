@@ -35,6 +35,8 @@ namespace SHR {
 
         ~TextDropDown() override;
 
+        void flipDirection() { mFlipDirection = !mFlipDirection; }
+
         void setSelected(int selected);
 
         void setListModel(ListModel *listModel);
@@ -48,6 +50,7 @@ namespace SHR {
         void removeSelectionListener(SelectionListener *selectionListener);
 
         virtual void draw(Graphics *graphics);
+        virtual void logic();
 
         void setBaseColor(const Color &color);
 
@@ -118,6 +121,7 @@ namespace SHR {
         bool mInternalListBox;
         bool mIsDragged;
         bool mScrollDisabled;
+        bool mFlipDirection;
         typedef std::list<SelectionListener *> SelectionListenerList;
         SelectionListenerList mSelectionListeners;
         typedef SelectionListenerList::iterator SelectionListenerIterator;

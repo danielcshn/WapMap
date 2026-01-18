@@ -1,63 +1,50 @@
 #ifndef H_C_ANIBANK
 #define H_C_ANIBANK
 
-#include <vector>
-#include <hge.h>
-#include "../shared/cREZ.h"
 #include "../shared/cANI.h"
-#include "guichan/listmodel.hpp"
+#include "../cDataController.h"
 
-class cAniBankAsset {
+class cAniBankAsset : public cAsset {
 protected:
-    char *m_szID;
     ANI::Animation *m_hAni;
 
     friend class cBankAni;
 
 public:
-    cAniBankAsset();
+    cAniBankAsset(cFile hFile, std::string id);
 
-    ~cAniBankAsset();
+    ~cAniBankAsset() override;
+
+    void Load() override;
+
+    void Unload() override;
 
     ANI::Animation *GetAni() { return m_hAni; };
 
-    const char *GetID() { return (const char *) m_szID; };
+    friend bool cAniBank_SortAssets(cAniBankAsset *a, cAniBankAsset *b);
 };
 
-class cBankAni : public gcn::ListModel {
-private:
-
-    std::vector<cAniBankAsset *> m_vAssets;
-
-    char *szPath;
-    REZ::Parser *hREZ;
-    bool bUseREZ;
+class cBankAni : public cAssetBank<cAniBankAsset> {
 public:
-    cBankAni();
-
-    ~cBankAni();
-
-    void LoadDirRecursive(REZ::Dir *dir, const char *pszPrefix);
-
-    void Load(REZ::File *file, const char *pszID);
+    explicit cBankAni(cDataController *hDC) : cAssetBank<cAniBankAsset>(hDC) {}
 
     cAniBankAsset *GetAssetByID(const char *pszID);
 
-    cAniBankAsset *GetAssetByIterator(int iIT) {
-        if (iIT < 0 || iIT >= m_vAssets.size()) return NULL;
-        return m_vAssets[iIT];
-    }
-
-    int GetAssetsCount() { return m_vAssets.size(); };
-
-    void AttachREZ(REZ::Parser *n) { hREZ = n; };
-
-    //inherited from listmodel
-    std::string getElementAt(int i);
-
-    int getNumberOfElements();
-
     void SortAssets();
+
+    void BatchProcessStart() override;
+    void BatchProcessEnd() override;
+
+    cAniBankAsset *AllocateAssetForMountPoint(cDC_MountEntry mountEntry) override;
+    std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) override;
+
+    const std::string& GetFolderName() override {
+        static const std::string name = "ANIS";
+        static const std::string namez = "ANIZ";
+        return hDC->GetGame() == WWD::Game_Gruntz ? namez : name;
+    };
+
+    void DeleteAsset(cAniBankAsset *hAsset) override;
 };
 
 #endif

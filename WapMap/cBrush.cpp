@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "globlua.h"
 #include "langID.h"
+#include "cDataController.h"
 
 #include "states/editing_ww.h"
 
@@ -239,7 +240,7 @@ int Brush_Panic(lua_State *L) {
     return 0;
 }
 
-cBrush::cBrush(const char *pszName, WWD::Parser *m_hParser, std::vector<std::string> vstrLayers, const char *ptr) {
+cBrush::cBrush(const char *pszName, cDataController *hDC, std::vector<std::string> vstrLayers, const char *ptr) {
     hconSettings = NULL;
     m_enStatus = BrushOK;
     m_L = NULL;
@@ -380,14 +381,14 @@ cBrush::cBrush(const char *pszName, WWD::Parser *m_hParser, std::vector<std::str
         }
     }
     lua_getglobal(m_L, "gameID");
-    if (lua_tointeger(m_L, 1) != m_hParser->GetGame()) {
+    if (lua_tointeger(m_L, 1) != hDC->GetGame()) {
         m_enStatus = BrushWrongGame;
         return;
     }
     lua_pop(m_L, 1);
 
     lua_getglobal(m_L, "levelID");
-    if (lua_tointeger(m_L, 1) != m_hParser->GetBaseLevel()) {
+    if (lua_tointeger(m_L, 1) != hDC->GetBaseLevel()) {
         m_enStatus = BrushWrongLevel;
         return;
     }

@@ -11,59 +11,10 @@ bool cSndBank_SortAssets(cSndBankAsset *a, cSndBankAsset *b) {
     return (std::string(a->GetName()) < std::string(b->GetName()));
 }
 
-cBankSound::cBankSound(WWD::Parser *hParser) : cAssetBank(hParser) {
-    bBatchProcessing = 0;
-}
-
-cBankSound::~cBankSound() {
-    for (int i = 0; i < m_vAssets.size(); i++) {
-        delete m_vAssets[i];
-        m_vAssets[i] = 0;
-    }
-}
-
-/*void cSndBank::LoadDiscRecursive(DIR * dir, const char * pszPrefix)
-{
-	char cwd[MAX_PATH];
-	::getcwd(cwd, MAX_PATH);
-	struct stat info;
-	struct dirent *dirp;
-	while( (dirp = readdir(dir)) != NULL ){
-	 if( dirp->d_name[0] == '.' ) continue;
-	 stat(dirp->d_name, &info);
-	 if( S_ISDIR(info.st_mode) ){
-	  DIR * dp = opendir(dirp->d_name);
-	  char * prefix = new char[strlen(pszPrefix)+strlen(dirp->d_name)+2];
-	  sprintf(prefix, "%s_%s", pszPrefix, dirp->d_name);
-	  _chdir(dirp->d_name);
-	  LoadDiscRecursive(dp, prefix);
-	  _chdir("..");
-	  closedir(dp);
-	  delete [] prefix;
-	 }else{
-	  char * ext = SHR::GetExtension(dirp->d_name);
-	  char * extl = SHR::ToLower(ext);
-	  if( !strcmp(extl, "wav") ){
-	   char * filename = SHR::GetFileWithoutExt(dirp->d_name);
-	   cSndBankAsset * as = new cSndBankAsset();
-	   as->m_szID = new char[strlen(filename)+strlen(pszPrefix)+2];
-	   sprintf(as->m_szID, "%s_%s", pszPrefix, filename);
-	   char path[strlen(cwd)+strlen(dirp->d_name)+2];
-	   sprintf(path, "%s\\%s", cwd, dirp->d_name);
-	   as->m_snd = hge->Effect_Load(path);
-	   m_vAssets.push_back(as);
-	   delete [] filename;
-	  }
-	  delete [] extl;
-	  delete [] ext;
-	 }
-	}
-}*/
-
 cSndBankAsset *cBankSound::GetAssetByID(const char *pszID) {
-    for (int i = 0; i < m_vAssets.size(); i++) {
-        if (!strcmp(m_vAssets[i]->GetName(), pszID)) {
-            return m_vAssets[i];
+    for (auto & m_vAsset : m_vAssets) {
+        if (!strcmp(m_vAsset->GetName(), pszID)) {
+            return m_vAsset;
         }
     }
     return NULL;
@@ -74,16 +25,11 @@ cSndBankAsset::cSndBankAsset(cFile hFile, std::string id) {
     _strName = id;
 }
 
-std::string cSndBankAsset::GetMountPoint() {
-    return std::string("/SND/") + _strName;
-}
-
 cSndBankAsset::~cSndBankAsset() {
     Unload();
 }
 
 void cSndBankAsset::Load() {
-    if (_bLoaded) return;
     unsigned int len;
     unsigned char *ptr = GetFile().hFeed->GetFileContent(GetFile().strPath.c_str(), len);
     if (len == 0) return;
@@ -97,31 +43,20 @@ void cSndBankAsset::Unload() {
     _bLoaded = 0;
 }
 
-std::string cBankSound::getElementAt(int i) {
-    if (i < 0 || i >= m_vAssets.size()) return "";
-    return m_vAssets[i]->GetName();
-}
-
-int cBankSound::getNumberOfElements() {
-    return m_vAssets.size();
-}
-
 void cBankSound::SortAssets() {
     sort(m_vAssets.begin(), m_vAssets.end(), cSndBank_SortAssets);
 }
 
-void cBankSound::BatchProcessStart(cDataController *hDC) {
-    bBatchProcessing = 1;
+void cBankSound::BatchProcessStart() {
     GV->Console->Printf("Loading sounds...");
     _ghProgressInfo.iGlobalProgress = 7;
     _ghProgressInfo.strGlobalCaption = "Loading sounds...";
     _ghProgressInfo.strDetailedCaption = "Scanning sounds...";
     _ghProgressInfo.iDetailedProgress = 0;
     _ghProgressInfo.iDetailedEnd = 100000;
-    iBatchPackageCount = 0;
 }
 
-void cBankSound::BatchProcessEnd(cDataController *hDC) {
+void cBankSound::BatchProcessEnd() {
     _ghProgressInfo.iDetailedProgress = 50000;
     _ghProgressInfo.iDetailedEnd = 100000;
     _ghProgressInfo.strDetailedCaption = "Sorting...";
@@ -137,44 +72,48 @@ void cBankSound::BatchProcessEnd(cDataController *hDC) {
             hDC->GetLooper()->Tick();
         m_vAssets[i]->Load();
     }
-    bBatchProcessing = false;
 }
 
-void cBankSound::ProcessAssets(cAssetPackage *hClientAP, std::vector<cFile> vFiles) {
-    float progperproces = 50000.0f / float(hClientAP->GetParent()->GetPackages().size());
-    for (int i = 0; i < vFiles.size(); i++) {
-        int cut = GetFolderName().length() + 1;
-        if (hClientAP->GetPath().length() > 0)
-            cut += hClientAP->GetPath().length() + 1;
-        std::string assetid = vFiles[i].strPath.substr(cut);
-        _ghProgressInfo.iDetailedProgress =
-                iBatchPackageCount * progperproces + (progperproces) * (float(i) / float(vFiles.size()));
-        _ghProgressInfo.strDetailedCaption = "File: " + assetid;
-        if (hClientAP->GetParent()->GetLooper() != 0)
-            hClientAP->GetParent()->GetLooper()->Tick();
+cSndBankAsset * cBankSound::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) {
+    std::string soundMountPoint(mountEntry.strMountPoint.c_str() + 8);
+    soundMountPoint.resize(soundMountPoint.length() - 4);
 
-        std::transform(vFiles[i].strPath.begin(), vFiles[i].strPath.end(), vFiles[i].strPath.begin(), ::tolower);
-        size_t lastdot = vFiles[i].strPath.rfind('.');
-        if (lastdot == std::string::npos || lastdot == vFiles[i].strPath.length() - 1) continue;
-        std::string ext = vFiles[i].strPath.substr(lastdot + 1);
-        if (ext.compare("wav") == 0) {
-            assetid = hClientAP->GetPrefix() + "_" + vFiles[i].strPath.substr(cut, lastdot - cut);
-            while (1) {
-                size_t p = assetid.find_first_of("/\\");
-                if (p == std::string::npos) break;
-                assetid[p] = '_';
-            }
-            std::transform(assetid.begin(), assetid.end(), assetid.begin(), ::toupper);
-            cSndBankAsset *as = new cSndBankAsset(vFiles[i], assetid);
-            m_vAssets.push_back(as);
-            hClientAP->RegisterAsset(as);
+    std::ranges::transform(soundMountPoint, soundMountPoint.begin(), ::toupper);
+    do {
+        const size_t slash = soundMountPoint.find('/');
+        if (slash == std::string::npos) break;
+        soundMountPoint[slash] = '_';
+    } while (true);
+
+    cSndBankAsset *as = GetAssetByID(soundMountPoint.c_str());
+    if (!as && !mountEntry.vFiles.empty()) {
+        as = new cSndBankAsset(mountEntry.vFiles[0], soundMountPoint);
+        m_vAssets.push_back(as);
+    }
+
+    return as;
+}
+
+bool isWav(const char* ext) {
+    return (ext[0] == 'w' || ext[0] == 'W')
+        && (ext[1] == 'a' || ext[1] == 'A')
+        && (ext[2] == 'v' || ext[2] == 'V');
+}
+
+std::string cBankSound::GetMountPointForFile(std::string strFilePath, std::string strPrefix) {
+    if (!isWav(strFilePath.c_str() + strFilePath.length() - 3)) {
+        return "";
+    }
+
+    return "/" + GetFolderName() + "/" + strPrefix + "/" + strFilePath;
+}
+
+void cBankSound::DeleteAsset(cSndBankAsset *hAsset) {
+    for (size_t i = 0; i < m_vAssets.size(); i++) {
+        if (m_vAssets[i] == hAsset) {
+            m_vAssets.erase(m_vAssets.begin() + i);
+            break;
         }
     }
-    if (!bBatchProcessing) {
-        SortAssets();
-        for (size_t i = 0; i < m_vAssets.size(); i++) {
-            m_vAssets[i]->Load();
-        }
-    } else
-        iBatchPackageCount++;
+    delete hAsset;
 }

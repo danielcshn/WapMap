@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <filesystem>
 #include "../../shared/cProgressInfo.h"
-#include "../../shared/commonFunc.h"
 #include "../globals.h"
 #include "../states/editing_ww.h"
 
@@ -16,11 +15,7 @@ bool cLogicsBank_Sort(cCustomLogic *a, cCustomLogic *b) {
 cCustomLogic::cCustomLogic(cFile hFile, std::string id) {
     SetFile(hFile);
     _strName = id;
-    _bLoaded = 0;
-}
-
-cCustomLogic::~cCustomLogic() {
-
+    _bLoaded = false;
 }
 
 void cCustomLogic::Load() {
@@ -60,15 +55,6 @@ std::string cCustomLogic::GetPath() {
     return GetFile().hFeed->GetAbsoluteLocation() + '\\' + GetFile().strPath;
 }
 
-cBankLogic::cBankLogic(WWD::Parser *hParser) : cAssetBank(hParser) {
-    hGlobalScript = 0;
-    selectWhenAdding = false;
-}
-
-cBankLogic::~cBankLogic() {
-
-}
-
 void cBankLogic::SetGlobalScript(cCustomLogic *h) {
     hGlobalScript = h;
 }
@@ -85,20 +71,11 @@ cCustomLogic *cBankLogic::GetLogicByName(const char *pszID) {
     return 0;
 }
 
-std::string cBankLogic::getElementAt(int i) {
-    if (i < 0 || i >= m_vAssets.size()) return "";
-    return m_vAssets[i]->GetName();
-}
-
-int cBankLogic::getNumberOfElements() {
-    return m_vAssets.size();
-}
-
 void cBankLogic::SortLogics() {
     std::sort(m_vAssets.begin(), m_vAssets.end(), cLogicsBank_Sort);
 }
 
-void cBankLogic::BatchProcessStart(cDataController *hDC) {
+void cBankLogic::BatchProcessStart() {
     _ghProgressInfo.iGlobalProgress = 8;
     _ghProgressInfo.strGlobalCaption = "Loading custom logics...";
 }
@@ -157,7 +134,7 @@ std::string cBankLogic::GetMountPointForFile(std::string strFilePath, std::strin
     return std::string("/LOGICS/") + strPrefix + strFilePath;
 }
 
-cAsset *cBankLogic::AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry) {
+cCustomLogic *cBankLogic::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) {
     int nameStart = mountEntry.vFiles[0].strPath.find_last_of("/\\") + 1;
     int nameEnd = mountEntry.vFiles[0].strPath.find_last_of(".");
     std::string filename = mountEntry.vFiles[0].strPath.substr(nameStart, nameEnd - nameStart);
@@ -181,11 +158,11 @@ cAsset *cBankLogic::AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEn
         hGlobalScript = customLogic;
     }
 
-    customLogic->_hBank = this;
+    customLogic->_hBank = (cAssetBank<cAsset>*)this;
     return customLogic;
 }
 
-void cBankLogic::DeleteAsset(cAsset *hLogic) {
+void cBankLogic::DeleteAsset(cCustomLogic *hLogic) {
     if (hLogic == hGlobalScript) {
         hGlobalScript = 0;
     }

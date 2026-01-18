@@ -47,7 +47,7 @@ namespace State {
         } else if (m_iType == LMODEL_ASSETS)
             if (m_hOwn->hParser == NULL)
                 return "";
-            else if (i >= m_hOwn->SprBank->GetAssetsCount())
+            else if (i >= m_hOwn->SprBank->getNumberOfElements())
                 return "";
             else
                 return m_hOwn->SprBank->GetAssetByIterator(i)->GetID();
@@ -57,9 +57,9 @@ namespace State {
                     i)->GetName();
             return ret;
         } else if (m_iType == LMODEL_ANIMATIONS) {
-            if (m_hOwn->hParser == NULL || i < 0 || i >= m_hOwn->hAniBank->GetAssetsCount())
+            if (m_hOwn->hParser == NULL || i < 0 || i >= m_hOwn->hAniBank->getNumberOfElements())
                 return "";
-            return m_hOwn->hAniBank->GetAssetByIterator(i)->GetID();
+            return m_hOwn->hAniBank->GetAssetByIterator(i)->GetName();
         } else if (m_iType == LMODEL_ANIMFRAMES) {
             if (m_hOwn->dbAssetsAni->getSelected() == -1) return "";
             ANI::Animation *ani = m_hOwn->hAniBank->GetAssetByIterator(m_hOwn->dbAssetsAni->getSelected())->GetAni();
@@ -138,14 +138,14 @@ namespace State {
             if (m_hOwn->hParser == NULL)
                 return 0;
             else
-                return m_hOwn->SprBank->GetAssetsCount();
+                return m_hOwn->SprBank->getNumberOfElements();
         } else if (m_iType == LMODEL_ASSETFRAMES) {
             if (m_hOwn->hParser == NULL || m_hOwn->dbAssetsImg->getSelected() == -1) return 0;
             int ret = m_hOwn->SprBank->GetAssetByIterator(m_hOwn->dbAssetsImg->getSelected())->GetSpritesCount();
             return ret;
         } else if (m_iType == LMODEL_ANIMATIONS) {
             if (m_hOwn->hParser == NULL) return 0;
-            return m_hOwn->hAniBank->GetAssetsCount();
+            return m_hOwn->hAniBank->getNumberOfElements();
         } else if (m_iType == LMODEL_ANIMFRAMES) {
             if (m_hOwn->hParser == NULL || m_hOwn->dbAssetsAni->getSelected() == -1) return 0;
             return m_hOwn->hAniBank->GetAssetByIterator(m_hOwn->dbAssetsAni->getSelected())->GetAni()->GetFramesCount();
@@ -169,12 +169,12 @@ namespace State {
             if (m_hOwn->hParser == NULL)
                 return 1;
             else
-                return m_hOwn->hSndBank->GetAssetsCount() + 1;
+                return m_hOwn->hSndBank->getNumberOfElements() + 1;
         else if (m_iType == LMODEL_SOUNDS_CLEAR)
             if (m_hOwn->hParser == NULL)
                 return 1;
             else
-                return m_hOwn->hSndBank->GetAssetsCount();
+                return m_hOwn->hSndBank->getNumberOfElements();
         else if (m_iType == LMODEL_ANIMSPEED)
             return 8;
     }

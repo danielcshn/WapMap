@@ -36,15 +36,15 @@ private:
 public:
     winImageSetBrowser();
 
-    virtual void Draw(int piCode);
+    void Draw(int piCode) override;
 
-    virtual void Think();
+    void Think() override;
 
-    virtual void OnDocumentChange();
+    void OnDocumentChange() override;
 
-    virtual void Open();
+    void Open() override;
 
-    virtual void action(const ActionEvent &actionEvent);
+    void action(const ActionEvent &actionEvent) override;
 
     void Synchronize();
 };

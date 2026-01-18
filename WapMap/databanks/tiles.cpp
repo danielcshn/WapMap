@@ -2,17 +2,16 @@
 #include <algorithm>
 #include <sys\stat.h>
 #include "../globals.h"
-#include "../globlua.h"
 #include "../langID.h"
 #include "../../shared/commonFunc.h"
 #include "../cParallelLoop.h"
 #include "../../shared/cProgressInfo.h"
 #include "../../shared/HashLib/hashlibpp.h"
-#include "../../shared/cWWD.h"
 #include "../cBrush.h"
 #include "../states/editing_ww.h"
 #include "../states/dialog.h"
 #include "../version.h"
+#include "../windows/tileBrowser.h"
 
 extern structProgressInfo _ghProgressInfo;
 extern HGE *hge;
@@ -23,15 +22,6 @@ bool cTileBank_SortTilesets(cTileImageSet *a, cTileImageSet *b) {
 
 bool cTileBank_SortTiles(cTile *a, cTile *b) {
     return (a->GetID() < b->GetID());
-}
-
-cBankTile::cBankTile(WWD::Parser *pr) : cAssetBank(pr) {
-    bReloadBrushes = false;
-}
-
-cBankTile::~cBankTile() {
-    for (auto & m_vhSet : m_vhSets)
-        delete m_vhSet;
 }
 
 cTileImageSet::cTileImageSet(int tileWidth, int tileHeight, const char *pszName) : tileWidth(tileWidth), tileHeight(tileHeight) {
@@ -52,7 +42,7 @@ void cTilesetTexture::CalculateDimension(int iTileNum, int tileW, int tileH, int
     iTexH = txh;
 }
 
-void cBankTile::BatchProcessStart(cDataController *hDC) {
+void cBankTile::BatchProcessStart() {
     GV->Console->Printf("Loading tiles...");
     _ghProgressInfo.iGlobalProgress = 5;
     _ghProgressInfo.strGlobalCaption = "Loading tiles...";
@@ -60,8 +50,8 @@ void cBankTile::BatchProcessStart(cDataController *hDC) {
     bReloadBrushes = false;
 }
 
-void cBankTile::BatchProcessEnd(cDataController *hDC) {
-    for (auto & m_vhSet : m_vhSets) {
+void cBankTile::BatchProcessEnd() {
+    for (auto & m_vhSet : m_vAssets) {
         m_vhSet->Sort();
     }
     if (bReloadBrushes) {
@@ -77,7 +67,7 @@ void cBankTile::BatchProcessEnd(cDataController *hDC) {
 
     int toloadc = 0;
     int sets = 0;
-    for (auto & m_vhSet : m_vhSets) {
+    for (auto & m_vhSet : m_vAssets) {
         bool f = false;
         for (int x = 0; x < m_vhSet->GetTilesCount(); x++) {
             cTile *t = m_vhSet->GetTileByIterator(x);
@@ -97,9 +87,9 @@ void cBankTile::BatchProcessEnd(cDataController *hDC) {
     int texidx = 0;
     if (vTexes.empty() && toloadc) {
         int txw, txh;
-        cTilesetTexture::CalculateDimension(toloadc, m_vhSets[0]->tileWidth, m_vhSets[0]->tileHeight, txw, txh);
-        auto ntex = new cTilesetTexture(txw / m_vhSets[0]->tileWidth, txh / m_vhSets[0]->tileHeight,
-                m_vhSets[0]->tileWidth, m_vhSets[0]->tileHeight);
+        cTilesetTexture::CalculateDimension(toloadc, m_vAssets[0]->tileWidth, m_vAssets[0]->tileHeight, txw, txh);
+        auto ntex = new cTilesetTexture(txw / m_vAssets[0]->tileWidth, txh / m_vAssets[0]->tileHeight,
+                m_vAssets[0]->tileWidth, m_vAssets[0]->tileHeight);
         vTexes.push_back(ntex);
         GV->Console->Printf("~w~Registered %dx%d tile texture to store %d tiles.", txw, txh, toloadc);
     }
@@ -107,7 +97,7 @@ void cBankTile::BatchProcessEnd(cDataController *hDC) {
         hDC->GetLooper()->Tick();
 
     int caret = 0;
-    for (auto & m_vhSet : m_vhSets) {
+    for (auto & m_vhSet : m_vAssets) {
         for (int y = 0; y < m_vhSet->GetTilesCount(); y++) {
             cTile *tile = m_vhSet->GetTileByIterator(y);
             if (tile->IsLoaded())
@@ -143,11 +133,11 @@ void cBankTile::BatchProcessEnd(cDataController *hDC) {
 }
 
 void cBankTile::SortTilesets() {
-    sort(m_vhSets.begin(), m_vhSets.end(), cTileBank_SortTilesets);
+    sort(m_vAssets.begin(), m_vAssets.end(), cTileBank_SortTilesets);
 }
 
-void cBankTile::DeleteAsset(cAsset *hAsset) {
-    std::string strMount = hAsset->GetMountPoint();
+void cBankTile::DeleteAsset(cTileImageSet *hAsset) {
+    std::string strMount = ((cTile*) hAsset)->GetMountPoint();
     strMount = strMount.substr(7);
     size_t pos = strMount.find('/');
     if (pos == std::string::npos) return;
@@ -161,12 +151,15 @@ void cBankTile::DeleteAsset(cAsset *hAsset) {
     set->DeleteTile(tile);
     delete tile;
     if (set->GetTilesCount() == 0) {
-        for (size_t i = 0; i < m_vhSets.size(); i++)
-            if (m_vhSets[i] == set) {
+        for (size_t i = 0; i < m_vAssets.size(); i++)
+            if (m_vAssets[i] == set) {
                 delete set;
-                m_vhSets.erase(m_vhSets.begin() + i);
-                return;
+                m_vAssets.erase(m_vAssets.begin() + i);
+                break;
             }
+    }
+    if (GV->editState->hwinTileBrowser->GetWindow()->isVisible()) {
+        GV->editState->hwinTileBrowser->Synchronize();
     }
 }
 
@@ -197,10 +190,10 @@ void cTileImageSet::DeleteTile(cTile *t) {
 
 void cBankTile::ReloadBrushes() {
     GV->Console->Printf("~w~Reloading brushes...");
-    if (m_vhSets.empty())
+    if (m_vAssets.empty())
         return;
 
-    for (auto & m_vhSet : m_vhSets)
+    for (auto & m_vhSet : m_vAssets)
         m_vhSet->m_vBrushes.clear();
 
     HANDLE hFind = INVALID_HANDLE_VALUE;
@@ -213,16 +206,16 @@ void cBankTile::ReloadBrushes() {
     }
 
     char sign;
-    if (hParser->GetGame() == WWD::Game_Claw)
+    if (hDC->GetGame() == WWD::Game_Claw)
         sign = 'c';
-    else if (hParser->GetGame() == WWD::Game_GetMedieval)
+    else if (hDC->GetGame() == WWD::Game_GetMedieval)
         sign = 'm';
-    else if (hParser->GetGame() == WWD::Game_Gruntz)
+    else if (hDC->GetGame() == WWD::Game_Gruntz)
         sign = 'g';
     else
         sign = 'x';
     std::vector<std::string> vszLayers;
-    for (auto & m_vhSet : m_vhSets) {
+    for (auto & m_vhSet : m_vAssets) {
         vszLayers.emplace_back(m_vhSet->m_szName);
     }
     do {
@@ -241,7 +234,7 @@ void cBankTile::ReloadBrushes() {
                 cBrush *tmp = NULL;
                 if (!strcmp("lua", lext))
                     while (true) {
-                        tmp = new cBrush(fdata.cFileName, hParser, vszLayers);
+                        tmp = new cBrush(fdata.cFileName, hDC, vszLayers);
                         if (tmp->GetStatus() == BrushLuaError || tmp->GetStatus() == BrushOtherError) {
                             char desc[256];
                             if (tmp->GetStatus() == BrushLuaError) {
@@ -294,7 +287,7 @@ void cBankTile::ReloadBrushes() {
                         fseek(f, actpos, SEEK_SET);
                         buf[len] = '\0';
 
-                        tmp = new cBrush(tmpch, hParser, vszLayers, buf);
+                        tmp = new cBrush(tmpch, hDC, vszLayers, buf);
                         delete[] buf;
                         if (tmp->GetStatus() == BrushLuaError || tmp->GetStatus() == BrushOtherError) {
                             GV->Console->Printf("~r~Error loading brush; forced skipping~w~ (~y~%s~w~)", tmpch);
@@ -313,7 +306,7 @@ void cBankTile::ReloadBrushes() {
             delete[] lext;
         }
     } while (FindNextFile(hFind, &fdata) != 0);
-    GV->Console->Printf("~g~Brushes reloaded for ~y~%d ~g~image sets.", int(m_vhSets.size()));
+    GV->Console->Printf("~g~Brushes reloaded for ~y~%d ~g~image sets.", int(m_vAssets.size()));
 }
 
 void cTileImageSet::Sort() {
@@ -329,7 +322,7 @@ cTileImageSet::~cTileImageSet() {
 }
 
 cTile *cBankTile::FindTile(short piID) {
-    for (auto & m_vhSet : m_vhSets) {
+    for (auto & m_vhSet : m_vAssets) {
         cTile *r = m_vhSet->GetTile(piID);
         if (r != NULL)
             return r;
@@ -347,7 +340,7 @@ cTile *cTileImageSet::GetTile(short piID) {
 
 cTile *cBankTile::GetTile(const char *pszSet, short piID) {
     if (pszSet == NULL) return NULL;
-    for (auto & m_vhSet : m_vhSets) {
+    for (auto & m_vhSet : m_vAssets) {
         if (!strcmp(pszSet, m_vhSet->m_szName)) {
             return m_vhSet->GetTile(piID);
         }
@@ -357,7 +350,7 @@ cTile *cBankTile::GetTile(const char *pszSet, short piID) {
 
 cTileImageSet *cBankTile::GetSet(const char *pszSet, bool bCaseSensitive) {
     if (pszSet == NULL) return NULL;
-    for (auto & m_vhSet : m_vhSets) {
+    for (auto & m_vhSet : m_vAssets) {
         if (bCaseSensitive ? !strcmp(pszSet, m_vhSet->m_szName) : !strcmpi(pszSet, m_vhSet->m_szName)) {
             return m_vhSet;
         }
@@ -435,16 +428,6 @@ int cTilesetTexture::GetFreeSlotsNum() {
     return (iW * iH) - iUsedSlots;
 }
 
-std::string cBankTile::getElementAt(int i) {
-    if (i < 0 || i >= m_vhSets.size()) return "";
-    return std::string(m_vhSets[i]->GetName());
-}
-
-int cBankTile::getNumberOfElements() {
-    if (m_vhSets.empty()) return 1;
-    return m_vhSets.size();
-}
-
 cTile::cTile(cImageInfo inf, int id, cTileImageSet *ts, cBankTile *bank) {
     imgInfo = inf;
     iID = id;
@@ -453,14 +436,15 @@ cTile::cTile(cImageInfo inf, int id, cTileImageSet *ts, cBankTile *bank) {
     _bLoaded = 0;
     _bForceReload = 0;
     hTS = ts;
-    _hBank = bank;
+    _hBank = (cAssetBank<cAsset>*)bank;
     cFile f;
     f.hFeed = 0;
     SetFile(f);
+    _strName = GetMountPoint();
 }
 
 cTile::~cTile() {
-    Unload();
+    cTile::Unload();
 }
 
 std::string cTile::GetMountPoint() {
@@ -469,7 +453,7 @@ std::string cTile::GetMountPoint() {
     return std::string("/") + _hBank->GetFolderName() + '/' + hTS->GetName() + "/" + tmp;
 }
 
-cAsset *cBankTile::AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry) {
+cTileImageSet *cBankTile::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) {
     cFile f;
     cImageInfo imginf;
     bool bfnd = false;
@@ -511,7 +495,7 @@ cAsset *cBankTile::AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEnt
     }
     auto *n = new cTile(imginf, id, is, this);
     is->AddTile(n);
-    return n;
+    return (cTileImageSet * )n;
 }
 
 void cTile::Load() {
@@ -586,4 +570,12 @@ std::string cBankTile::GetMountPointForFile(std::string strFilePath, std::string
     char buf[16];
     sprintf(buf, "%d", tid);
     return std::string("/") + GetFolderName() + '/' + strTileSet + "/" + buf;
+}
+
+void cBankTile::RedrawAssets() {
+    for (auto& as : m_vAssets) {
+        for (auto& spr : as->m_vTiles) {
+            spr->Reload();
+        }
+    }
 }

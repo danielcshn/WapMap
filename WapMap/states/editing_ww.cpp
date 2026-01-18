@@ -161,7 +161,7 @@ void State::EditingWW::Init() {
     mainListener = new EditingWWMainListener(this);
     vp = new EditingWWvpCallback(this);
 
-    gui->addGlobalKeyListener(mainListener);
+    conMain->addKeyListener(mainListener);
     conMain->addMouseListener(mainListener);
 
     MDI = new cMDI();
@@ -207,6 +207,7 @@ void State::EditingWW::Init() {
     sliVer->setScaleStart(0);
     sliVer->addActionListener(mainListener);
     sliVer->setMarkerLength(40);
+    sliVer->setStepLength(64);
     conMain->add(sliVer, 0, 0);
 
     sliHor = new SHR::Slider(100);
@@ -214,6 +215,7 @@ void State::EditingWW::Init() {
     sliHor->setScaleStart(0);
     sliHor->addActionListener(mainListener);
     sliHor->setMarkerLength(40);
+    sliHor->setStepLength(64);
     conMain->add(sliHor, 0, 0);
 
     butMicroTileCB = new SHR::But(GV->hGfxInterface, GV->sprIcons16[Icon16_ModeTile]);
@@ -307,11 +309,13 @@ void State::EditingWW::Init() {
     hwinTileBrowser = new winTileBrowser();
     hwinImageSetBrowser = new winImageSetBrowser();
     hwinAbout = new winAbout();
+    hwinPaletteBrowser = new winPaletteBrowser();
     hWindows.push_back(hwinNewMap);
     hWindows.push_back(hwinOptions);
     hWindows.push_back(hwinTileBrowser);
     hWindows.push_back(hwinImageSetBrowser);
     hWindows.push_back(hwinAbout);
+    hWindows.push_back(hwinPaletteBrowser);
 
     for (auto & hWindow : hWindows) {
         SHR::Win *win = hWindow->GetWindow();
@@ -503,7 +507,6 @@ void State::EditingWW::Init() {
     sliSearchObj->setOrientation(SHR::Slider::VERTICAL);
     sliSearchObj->setDimension(gcn::Rectangle(0, 0, 11, 423));
     sliSearchObj->setVisible(0);
-    sliSearchObj->setMarkerLength(20);
     winSearchObj->add(sliSearchObj, 430, 105);
 
     winTileProp = new SHR::Win(&GV->gcnParts, GETL(Lang_TileProperties));
@@ -844,8 +847,8 @@ void State::EditingWW::Init() {
     condbSounds->setDimension(gcn::Rectangle(0, 0, 790, 570));
 
     tadbTabs = new SHR::TabbedArea();
-    tadbTabs->addTab(GETL2S("WinDatabase", "Tab_Tilesets"), condbTiles);
-    tadbTabs->addTab(GETL2S("WinDatabase", "Tab_Imagesets"), condbImages);
+    // tadbTabs->addTab(GETL2S("WinDatabase", "Tab_Tilesets"), condbTiles);
+    // tadbTabs->addTab(GETL2S("WinDatabase", "Tab_Imagesets"), condbImages);
     tadbTabs->addTab(GETL2S("WinDatabase", "Tab_Anims"), condbAnims);
     tadbTabs->addTab(GETL2S("WinDatabase", "Tab_Sounds"), condbSounds);
     tadbTabs->setDimension(gcn::Rectangle(0, 0, 790, 570));
@@ -1852,7 +1855,7 @@ void State::EditingWW::Init() {
     conMain->add(advcon_Warp, 400, 400);
 
     advcon_Container = new SHR::Context(&GV->gcnParts, GV->fntMyriad16);
-    advcon_Container->AddElement(OBJMENU_ADV_CONTAINER_RAND, GETL2S("EditObj_Statue", "Context_Randomize"),
+    advcon_Container->AddElement(OBJMENU_ADV_CONTAINER_RAND, GETL2S("EditObj_Container", "Context_Randomize"),
                                  GV->sprIcons16[Icon16_Treasure]);
     advcon_Container->adjustSize();
     advcon_Container->hide();
@@ -2369,6 +2372,7 @@ void State::EditingWW::GainFocus(ReturnCode<void> code, bool bFlipped) {
                 hAniBank = dd->hAniBank;
                 hDataCtrl = dd->hDataCtrl;
                 hCustomLogics = dd->hCustomLogicBank;
+                hPalettesBank = dd->hPalettesBank;
                 //delete md;
                 if (MDI->GetActiveDoc() != NULL) {
                     PrepareForDocumentSwitch();
@@ -3084,7 +3088,7 @@ void State::EditingWW::SyncLogicBrowser() {
     if (validSelect) {
         if (!bLogicBrowserExpanded) ExpandLogicBrowser();
 
-        cCustomLogic *logic = hCustomLogics->GetLogicByIterator(lbbrlLogicList->getSelected());
+        cCustomLogic *logic = hCustomLogics->GetAssetByIterator(lbbrlLogicList->getSelected());
         cFile f = logic->GetFile();
         labbrlLogicNameV->setCaption(logic->GetName());
         std::string path = logic->GetPath();
@@ -3174,6 +3178,7 @@ void State::EditingWW::DocumentSwitched() {
     hSndBank = MDI->GetActiveDoc()->hSndBank;
     hAniBank = MDI->GetActiveDoc()->hAniBank;
     hCustomLogics = MDI->GetActiveDoc()->hCustomLogicBank;
+    hPalettesBank = MDI->GetActiveDoc()->hPalettesBank;
     hDataCtrl = MDI->GetActiveDoc()->hDataCtrl;
     hPlaneData = MDI->GetActiveDoc()->hPlaneData;
     fZoom = MDI->GetActiveDoc()->fZoom;

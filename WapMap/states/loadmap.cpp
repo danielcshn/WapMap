@@ -10,6 +10,8 @@
 #include "../databanks/sounds.h"
 #include "../databanks/anims.h"
 #include "../databanks/logics.h"
+#include "../databanks/meta.h"
+#include "../databanks/palettes.h"
 #include "../version.h"
 
 structProgressInfo _ghProgressInfo;
@@ -237,39 +239,40 @@ bool State::LoadMap::Think() {
 
             GV->Console->Printf("~w~Mounting VFS...");
 
-            dd->hDataCtrl = new cDataController(dd->hParser->GetGame(), GV->gamePaths[dd->hParser->GetGame()],
+            dd->hDataCtrl = new cDataController(dd->hParser, GV->gamePaths[dd->hParser->GetGame()],
                                                 std::string(szDir ? szDir : ""), std::string(szFilename));
-            GV->Console->Printf(" ~y~REZ file:       ~g~%s", dd->hDataCtrl->GetFeed(DB_FEED_REZ) == 0 ? "~r~[not mounted]"
-                                                                                                      : dd->hDataCtrl->GetFeed(
-                            DB_FEED_REZ)->GetAbsoluteLocation().c_str());
-            GV->Console->Printf(" ~y~Disc directory: ~g~%s", dd->hDataCtrl->GetFeed(DB_FEED_DISC) == 0 ? "~r~[not mounted]"
-                                                                                                       : dd->hDataCtrl->GetFeed(
-                            DB_FEED_DISC)->GetAbsoluteLocation().c_str());
-            GV->Console->Printf(" ~y~Custom dir:     ~g~%s", dd->hDataCtrl->GetFeed(DB_FEED_CUSTOM) == 0 ? "~r~[not mounted]"
-                                                                                                         : dd->hDataCtrl->GetFeed(
-                            DB_FEED_CUSTOM)->GetAbsoluteLocation().c_str());
-            dd->hTilesBank = new cBankTile(dd->hParser);
-            dd->hSprBank = new cBankImageSet(dd->hParser);
-            dd->hSndBank = new cBankSound(dd->hParser);
-            dd->hAniBank = new cBankAni();
-            dd->hCustomLogicBank = new cBankLogic(dd->hParser);
+            GV->Console->Printf(" ~y~REZ file:       ~g~%s", !dd->hDataCtrl->GetFeed(DB_FEED_REZ)
+                ? "~r~[not mounted]" : dd->hDataCtrl->GetFeed(DB_FEED_REZ)->GetAbsoluteLocation().c_str());
+            GV->Console->Printf(" ~y~Disc directory: ~g~%s", !dd->hDataCtrl->GetFeed(DB_FEED_DISC)
+                ? "~r~[not mounted]" : dd->hDataCtrl->GetFeed(DB_FEED_DISC)->GetAbsoluteLocation().c_str());
+            cFileFeed* customFileFeed = dd->hDataCtrl->GetFeed(DB_FEED_CUSTOM);
+            GV->Console->Printf(" ~y~Custom dir:     ~g~%s", !customFileFeed
+                ? "~r~[not mounted]" : customFileFeed->GetAbsoluteLocation().c_str());
+            dd->hTilesBank = new cBankTile(dd->hDataCtrl);
+            dd->hSprBank = new cBankImageSet(dd->hDataCtrl);
+            dd->hSndBank = new cBankSound(dd->hDataCtrl);
+            dd->hAniBank = new cBankAni(dd->hDataCtrl);
+            dd->hCustomLogicBank = new cBankLogic(dd->hDataCtrl);
+            dd->hPalettesBank = new cBankPalettes(dd->hDataCtrl, dd->hSprBank, dd->hTilesBank);
 
+            dd->hDataCtrl->RegisterAssetBank(dd->hPalettesBank);
             dd->hDataCtrl->RegisterAssetBank(dd->hTilesBank);
             dd->hDataCtrl->RegisterAssetBank(dd->hSprBank);
             dd->hDataCtrl->RegisterAssetBank(dd->hSndBank);
+            dd->hDataCtrl->RegisterAssetBank(dd->hAniBank);
             dd->hDataCtrl->RegisterAssetBank(dd->hCustomLogicBank);
 
-            auto game = dd->hParser->GetGame();
-            if (game != WWD::Game_Gruntz) {
-                char palettePath[256];
-                const char* dataSourceName = game == WWD::Game_GetMedieval ? "DUNGEON" : "LEVEL";
-                sprintf(palettePath, "%s%d/PALETTES/MAIN.PAL", dataSourceName, dd->hParser->GetBaseLevel());
-                if (!dd->hDataCtrl->SetPalette(palettePath)) {
-                    GV->Console->Printf("~r~Error loading palette: '~y~%s~r~'!", palettePath);
-                } else {
-                    GV->Console->Printf("~g~Palette loaded: '~y~%s~g~'.", palettePath);
-                }
-            }
+            // auto game = dd->hParser->GetGame();
+            // if (game != WWD::Game_Gruntz) {
+            //     char palettePath[256];
+            //     const char* dataSourceName = game == WWD::Game_GetMedieval ? "DUNGEON" : "LEVEL";
+            //     sprintf(palettePath, "%s%d/PALETTES/MAIN.PAL", dataSourceName, dd->hParser->GetBaseLevel());
+            //     if (!dd->hDataCtrl->SetPalette(palettePath, false)) {
+            //         GV->Console->Printf("~r~Error loading palette: '~y~%s~r~'!", palettePath);
+            //     } else {
+            //         GV->Console->Printf("~g~Palette loaded: '~y~%s~g~'.", palettePath);
+            //     }
+            // }
 
             GV->Console->Printf("Creating packages...");
             if (dd->hDataCtrl->GetFeed(DB_FEED_REZ) != 0)
@@ -278,11 +281,17 @@ bool State::LoadMap::Think() {
             char dataSourceName[64];
             switch (dd->hParser->GetGame()) {
             case WWD::Game_Claw:
-            case WWD::Game_Claw2:
+            case WWD::Game_Claw2: {
                 dd->hDataCtrl->CreatePackage("CLAW", "CLAW", cDC_STANDARD);
                 sprintf(dataSourceName, "LEVEL%d", dd->hParser->GetBaseLevel());
-                dd->hDataCtrl->CreatePackage(dataSourceName, "LEVEL", cDC_STANDARD);
+                auto levelPackage = dd->hDataCtrl->CreatePackage(dataSourceName, "LEVEL", cDC_STANDARD);
+
+                if (customFileFeed) {
+                    dd->hMetaBank = new cBankMeta(dd->hDataCtrl, levelPackage, dd->hSprBank, dd->hSndBank, dd->hAniBank);
+                    dd->hDataCtrl->RegisterAssetBank(dd->hMetaBank);
+                }
                 break;
+            }
             case WWD::Game_GetMedieval:
                 dd->hDataCtrl->CreatePackage("ENEMIES", "ENEMIES", cDC_STANDARD);
                 dd->hDataCtrl->CreatePackage("PLAYERS", "PLAYERS", cDC_STANDARD);
@@ -305,7 +314,7 @@ bool State::LoadMap::Think() {
             /*dd->hDataCtrl->RegisterAssetBank(dd->hSndBank);
             dd->hDataCtrl->RegisterAssetBank(dd->hAniBank);*/
 
-            /*for (int i = 0; i < dd->hSprBank->GetAssetsCount(); i++) {
+            /*for (int i = 0; i < dd->hSprBank->getNumberOfElements(); i++) {
                 cSprBankAsset *as = dd->hSprBank->GetAssetByIterator(i);
                 for (int x = 0; x < as->GetSpritesCount(); x++) {
                     if (as->GetIMGByIterator(x)->GetSprite() == 0) {

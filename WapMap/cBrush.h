@@ -20,6 +20,8 @@ extern "C" {
 
 #define BRUSHICON_INVALID -1
 
+class cDataController;
+
 int wmRandInt(lua_State *L);
 
 int wmPlaceTile(lua_State *L);
@@ -68,7 +70,7 @@ private:
     friend class cTileImageSet;
 
 public:
-    cBrush(const char *pszName, WWD::Parser *m_hParser, std::vector<std::string> vstrLayers, const char *ptr = NULL);
+    cBrush(const char *pszName, cDataController *hDC, std::vector<std::string> vstrLayers, const char *ptr = NULL);
 
     ~cBrush();
 
