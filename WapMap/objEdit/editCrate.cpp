@@ -4,6 +4,7 @@
 #include "../states/editing_ww.h"
 #include "winInventoryPickbox.h"
 #include "../databanks/imageSets.h"
+#include "../cObjectUserData.h"
 
 namespace ObjEdit {
     cEditObjCrate::cEditObjCrate(WWD::Object *obj, State::EditingWW *st) : cObjEdit(obj, st) {
@@ -78,7 +79,10 @@ namespace ObjEdit {
         const char* logic = hTempObj->GetLogic();
         int z = hTempObj->GetParam(WWD::Param_LocationZ);
         if (!z) {
-            hTempObj->SetParam(WWD::Param_LocationZ, LogicInfo::GetContainerDefaultZ(logic));
+            z = LogicInfo::GetContainerDefaultZ(logic);
+			GetUserDataFromObj(hTempObj)->SetZ(z);
+            hTempObj->SetParam(WWD::Param_LocationZ, z);
+			hState->vPort->MarkToRedraw();
         }
 
         alignment = 2;
@@ -321,16 +325,21 @@ namespace ObjEdit {
             RebuildWindow();
             ApplyInventoryToObject();
         } else if (actionEvent.getSource() == tfCustomZ) {
-            hTempObj->SetParam(WWD::Param_LocationZ, std::atoi(tfCustomZ->getText().c_str()));
+            int z = std::atoi(tfCustomZ->getText().c_str());
+			GetUserDataFromObj(hTempObj)->SetZ(z);
+            hTempObj->SetParam(WWD::Param_LocationZ, z);
             SetLogic(bStackable && iCratesCount > 2);
+			hState->vPort->MarkToRedraw();
         } else {
             for (int i = 0; i < 3; i++) {
                 if (actionEvent.getSource() == rbType[i]) {
                     alignment = i;
                     tfCustomZ->setEnabled(alignment == 2);
-                    if (alignment == 2) hTempObj->SetParam(WWD::Param_LocationZ, std::atoi(tfCustomZ->getText().c_str()));
                     SetLogic(bStackable && iCratesCount > 2);
-                    if (alignment != 2) hTempObj->SetParam(WWD::Param_LocationZ, LogicInfo::GetContainerDefaultZ(hTempObj->GetLogic()));
+                    int z = alignment == 2 ? std::atoi(tfCustomZ->getText().c_str()) : LogicInfo::GetContainerDefaultZ(hTempObj->GetLogic());
+                    GetUserDataFromObj(hTempObj)->SetZ(z);
+                    hTempObj->SetParam(WWD::Param_LocationZ, z);
+			        hState->vPort->MarkToRedraw();
                     return;
                 }
             }
@@ -368,7 +377,10 @@ namespace ObjEdit {
                         hState->vPort->MarkToRedraw();
                         ApplyInventoryToObject();
                         if (alignment != 2) {
-                            hTempObj->SetParam(WWD::Param_LocationZ, LogicInfo::GetContainerDefaultZ(hTempObj->GetLogic()));
+                            int z = LogicInfo::GetContainerDefaultZ(hTempObj->GetLogic());
+                            GetUserDataFromObj(hTempObj)->SetZ(z);
+                            hTempObj->SetParam(WWD::Param_LocationZ, z);
+			                hState->vPort->MarkToRedraw();
                         }
                         return;
                     }

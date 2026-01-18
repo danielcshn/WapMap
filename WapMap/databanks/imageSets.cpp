@@ -4,7 +4,6 @@
 #include "../cObjectUserData.h"
 #include "../states/editing_ww.h"
 #include "../../shared/HashLib/hashlibpp.h"
-#include "../cTextureAtlas.h"
 #include "../cParallelLoop.h"
 #include "../windows/imgsetBrowser.h"
 
@@ -19,15 +18,10 @@ bool cSprBank_SortAssetImages(cSprBankAssetIMG *a, cSprBankAssetIMG *b) {
     return (a->GetID() < b->GetID());
 }
 
-cBankImageSet::cBankImageSet(WWD::Parser *hParser) : cAssetBank(hParser) {
-    myAtlaser = new cTextureAtlaser();
-}
-
-cBankImageSet::~cBankImageSet() {
-    for (auto & m_vAsset : m_vAssets) {
-        delete m_vAsset;
+cSprBankAsset::~cSprBankAsset() {
+    for (auto & m_vSprite : m_vSprites) {
+        delete m_vSprite;
     }
-    delete myAtlaser;
 }
 
 cSprBankAsset *cBankImageSet::GetAssetByID(const char *pszID) {
@@ -39,31 +33,11 @@ cSprBankAsset *cBankImageSet::GetAssetByID(const char *pszID) {
     return NULL;
 }
 
-cSprBankAsset::cSprBankAsset(std::string id) {
-    strID = id;
-    m_iMaxID = 0;
-}
-
-cSprBankAsset::~cSprBankAsset() {
-    for (auto & m_vSprite : m_vSprites) {
-        delete m_vSprite;
-    }
-}
-
 void cSprBankAssetIMG::Load() {
-    cDC_MountEntry* entry = hParent->GetParent()->GetMountEntry(GetMountPoint());
-    if (!entry) {
-        GV->Console->Print("~r~Entry not found! (cSprBankAssetIMG::Load)~w~");
-        return;
-    }
-    if (entry->vFiles[0].hFeed != GetFile().hFeed || entry->vFiles[0].strPath != GetFile().strPath) {
-        SetFile(entry->vFiles[0]);
-    }
-
     size_t lp = GetFile().strPath.find_last_of('/');
     _strName = GetFile().strPath.substr((lp == std::string::npos ? 0 : lp + 1));
 
-    if (!hParent->GetParent()->IsLoadableImage(GetFile(), &imgInfo, cImageInfo::Full))
+    if (!hParent || !hParent->GetParent()->IsLoadableImage(GetFile(), &imgInfo, cImageInfo::Full))
         return;
     imgSprite = new hgeSprite(0, 0, 0, imgInfo.iWidth, imgInfo.iHeight);
     imgSprite->SetHotSpot(-imgInfo.iOffsetX + imgInfo.iWidth / 2, -imgInfo.iOffsetY + imgInfo.iHeight / 2);
@@ -76,29 +50,23 @@ void cSprBankAssetIMG::Load() {
 		hIS->m_iMaxHeight = imgInfo.iHeight;
 	}
 
-    ((cBankImageSet *) _hBank)->GetTextureAtlaser()->AddSprite(imgSprite);
-    ((cBankImageSet *) _hBank)->GetTextureAtlaser()->Pack();
+    ((cBankImageSet *) _hBank)->atlaser.AddSprite(imgSprite);
+    ((cBankImageSet *) _hBank)->atlaser.Pack();
 
-    if (imgSprite->GetTexture() == 0) {
-        return;
-    }
-
-    float x, y, w, h;
-    imgSprite->GetTextureRect(&x, &y, &w, &h);
-    hParent->GetParent()->RenderImage(GetFile(), imgSprite->GetTexture(), x, y, 2048);
+    RenderToTexture();
 
     _bLoaded = true;
 }
 
 void cSprBankAssetIMG::Unload() {
     if (!_bLoaded) return;
-    ((cBankImageSet *) _hBank)->GetTextureAtlaser()->DeleteSprite(imgSprite);
+    ((cBankImageSet *) _hBank)->atlaser.DeleteSprite(imgSprite);
     delete imgSprite;
     imgSprite = 0;
     _bLoaded = false;
 }
 
-cSprBankAssetIMG::cSprBankAssetIMG(int it, cBankImageSet *par, cSprBankAsset *is, int id) {
+cSprBankAssetIMG::cSprBankAssetIMG(cFile file, int it, cBankImageSet *par, cSprBankAsset *is, int id) {
     _bLoaded = false;
     _bForceReload = false;
     hIS = is;
@@ -108,11 +76,9 @@ cSprBankAssetIMG::cSprBankAssetIMG(int it, cBankImageSet *par, cSprBankAsset *is
     //imgSprite = new hgeSprite(0, 0, 0, inf.iWidth, inf.iHeight);
     //imgSprite->SetHotSpot(-inf.iOffsetX+inf.iWidth/2, -inf.iOffsetY+inf.iHeight/2);
 
-    cFile f;
-    f.hFeed = 0;
-    SetFile(f);
+    SetFile(file);
 
-    _hBank = par;
+    _hBank = (cAssetBank<cAsset>*) par;
 
     //hAtlaser = par->GetTextureAtlaser();
     //hAtlaser->AddSprite(imgSprite);
@@ -123,7 +89,17 @@ cSprBankAssetIMG::cSprBankAssetIMG(int it, cBankImageSet *par, cSprBankAsset *is
 }
 
 cSprBankAssetIMG::~cSprBankAssetIMG() {
-    Unload();
+    cSprBankAssetIMG::Unload();
+}
+
+void cSprBankAssetIMG::RenderToTexture() {
+    if (!imgSprite || imgSprite->GetTexture() == 0) {
+        return;
+    }
+
+    float x, y, w, h;
+    imgSprite->GetTextureRect(&x, &y, &w, &h);
+    hParent->GetParent()->RenderImage(GetFile(), imgSprite->GetTexture(), x, y, 2048);
 }
 
 std::string cSprBankAssetIMG::GetMountPoint() {
@@ -188,17 +164,17 @@ void cSprBankAsset::SortAndFixIterators() {
 
 void cSprBankAsset::UpdateHash() {
     std::string acchash;
-    for (size_t i = 0; i < m_vSprites.size(); i++)
-        acchash.append(m_vSprites[i]->GetHash());
+    for (auto & m_vSprite : m_vSprites)
+        acchash.append(m_vSprite->GetHash());
     hashwrapper *hasher = new md5wrapper();
     strHash = hasher->getHashFromString(acchash);
     delete hasher;
 }
 
 cSprBankAssetIMG *cSprBankAsset::GetIMGByID(int id) {
-    for (int i = 0; i < m_vSprites.size(); i++) {
-        if (id == m_vSprites[i]->GetID())
-            return m_vSprites[i];
+    for (auto & m_vSprite : m_vSprites) {
+        if (id == m_vSprite->GetID())
+            return m_vSprite;
     }
     return 0;
 }
@@ -315,20 +291,11 @@ WWD::Rect cBankImageSet::GetObjectRenderRect(WWD::Object *obj) {
     return ret;
 }
 
-std::string cBankImageSet::getElementAt(int i) {
-    if (i < 0 || i >= m_vAssets.size()) return "";
-    return m_vAssets[i]->GetID();
-}
-
-int cBankImageSet::getNumberOfElements() {
-    return m_vAssets.size();
-}
-
 void cBankImageSet::SortAssets() {
-    sort(m_vAssets.begin(), m_vAssets.end(), cSprBank_SortAssets);
+    std::ranges::sort(m_vAssets, cSprBank_SortAssets);
 }
 
-void cBankImageSet::BatchProcessStart(cDataController *hDC) {
+void cBankImageSet::BatchProcessStart() {
     GV->Console->Printf("Scanning image sets...");
     _ghProgressInfo.iGlobalProgress = 6;
     _ghProgressInfo.strGlobalCaption = "Scanning image sets...";
@@ -336,7 +303,7 @@ void cBankImageSet::BatchProcessStart(cDataController *hDC) {
     _ghProgressInfo.iDetailedEnd = 100000;
 }
 
-void cBankImageSet::BatchProcessEnd(cDataController *hDC) {
+void cBankImageSet::BatchProcessEnd() {
     cParallelLoop *looper = hDC->GetLooper();
     _ghProgressInfo.strDetailedCaption = "Packing textures...";
     _ghProgressInfo.iDetailedProgress = 50000;
@@ -344,7 +311,7 @@ void cBankImageSet::BatchProcessEnd(cDataController *hDC) {
     if (looper != 0)
         looper->Tick();
     SortAssets();
-    myAtlaser->Pack();
+    atlaser.Pack();
     int spritec = 0;
     for (auto & m_vAsset : m_vAssets)
         spritec += m_vAsset->m_vSprites.size();
@@ -383,12 +350,12 @@ std::string cBankImageSet::GetMountPointForFile(std::string strFilePath, std::st
     const char* fileDot = strrchr(strFile.c_str(), '.');
     if (!fileDot || !canReadExtension(fileDot + 1))
         return "";
-    std::transform(strSet.begin(), strSet.end(), strSet.begin(), ::toupper);
-    size_t slash = strSet.find('/');
-    while (slash != std::string::npos) {
+    std::ranges::transform(strSet, strSet.begin(), ::toupper);
+    do {
+        const size_t slash = strSet.find('/');
+        if (slash == std::string::npos) break;
         strSet[slash] = '_';
-        slash = strSet.find('/');
-    }
+    } while (true);
 
     size_t numpos = strFile.find_first_of("1234567890");
     int tid = 0;
@@ -404,7 +371,7 @@ std::string cBankImageSet::GetMountPointForFile(std::string strFilePath, std::st
     return "/" + GetFolderName() + '/' + strSet + '/' + std::to_string(tid);
 }
 
-cAsset *cBankImageSet::AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry) {
+cSprBankAsset *cBankImageSet::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) {
     size_t lslash = mountEntry.strMountPoint.rfind('/');
     std::string strID = mountEntry.strMountPoint.substr(8, lslash - 8),
             strFrame = mountEntry.strMountPoint.substr(lslash + 1);
@@ -415,12 +382,12 @@ cAsset *cBankImageSet::AllocateAssetForMountPoint(cDataController *hDC, cDC_Moun
         as = new cSprBankAsset(strID);
         m_vAssets.push_back(as);
     }
-    cSprBankAssetIMG *img = new cSprBankAssetIMG(as->m_vSprites.size(), this, as, iFrame);
+    cSprBankAssetIMG *img = new cSprBankAssetIMG(mountEntry.vFiles[0], as->m_vSprites.size(), this, as, iFrame);
     as->AddIMG(img);
-    return img;
+    return (cSprBankAsset *)img;
 }
 
-void cBankImageSet::DeleteAsset(cAsset *hAsset) {
+void cBankImageSet::DeleteAsset(cSprBankAsset *hAsset) {
     std::string strMount = hAsset->GetMountPoint();
     strMount = strMount.substr(8);
     size_t pos = strMount.find('/');
@@ -457,4 +424,12 @@ bool cBankImageSet::canReadExtension(const char *ext) {
                && (ext[1] == 'M' || ext[1] == 'm')
                && (ext[2] == 'P' || ext[2] == 'p')
                && ext[3] == 0);
+}
+
+void cBankImageSet::RedrawAssets() {
+    for (auto& as : m_vAssets) {
+        for (auto& spr : as->m_vSprites) {
+            spr->RenderToTexture();
+        }
+    }
 }

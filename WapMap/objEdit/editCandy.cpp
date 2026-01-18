@@ -23,20 +23,20 @@
 
 namespace ObjEdit {
 
-	std::vector<std::string> cEditObjCandy::AnimationsList = {
-		"GAME_BACKWARD50",
-		"GAME_BACKWARD100",
-		"GAME_CYCLE50",
-		"GAME_CYCLE100",
-		"GAME_CYCLE200",
-		"GAME_CYCLE500",
-		"GAME_FORWARD50",
-		"GAME_FORWARD100",
-		"GAME_REVERSECYCLE50",
-		"GAME_REVERSECYCLE100",
-		"GAME_REVERSECYCLE200",
-		"GAME_REVERSECYCLE500",
-	};
+	// std::vector<std::string> cEditObjCandy::AnimationsList = {
+	// 	"GAME_BACKWARD50",
+	// 	"GAME_BACKWARD100",
+	// 	"GAME_CYCLE50",
+	// 	"GAME_CYCLE100",
+	// 	"GAME_CYCLE200",
+	// 	"GAME_CYCLE500",
+	// 	"GAME_FORWARD50",
+	// 	"GAME_FORWARD100",
+	// 	"GAME_REVERSECYCLE50",
+	// 	"GAME_REVERSECYCLE100",
+	// 	"GAME_REVERSECYCLE200",
+	// 	"GAME_REVERSECYCLE500",
+	// };
 
 	cEditObjCandy::cEditObjCandy(WWD::Object *obj, State::EditingWW *st) : cObjEdit(obj, st) {
         iType = ObjEdit::enCandy;
@@ -45,7 +45,7 @@ namespace ObjEdit {
         const char* imageSet = obj->GetImageSet();
         bool found = imageSet[0] == 0;
         std::vector<cSprBankAsset*>* currentBank;
-		for (size_t i = 0; i < GV->editState->SprBank->GetAssetsCount(); i++) {
+		for (size_t i = 0; i < GV->editState->SprBank->getNumberOfElements(); i++) {
 			cSprBankAsset* imgSet = GV->editState->SprBank->GetAssetByIterator(i);
 			std::string name(imgSet->GetID());
 			if (name.starts_with("LEVEL_") && GV->vstrStandardImagesets.contains(name)) {
@@ -184,7 +184,8 @@ namespace ObjEdit {
 
 		const char* anim = obj->GetAnim();
 		if (!anim || !*anim) anim = "GAME_CYCLE100";
-		animation = new SHR::TextDropDown(anim, this);
+		animation = new SHR::TextDropDown(anim, hState->hAniBank);
+		animation->flipDirection();
 		animation->setWidth(CONTAINER_WIDTH - animated->getWidth() - 28);
 		animation->setEnabled(animated->isSelected());
 		animation->setText(anim);

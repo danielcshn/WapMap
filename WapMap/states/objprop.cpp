@@ -118,7 +118,7 @@ namespace State {
                 m_hOwn->asImageSetPick = GV->editState->SprBank->GetAssetByIterator(0);
                 m_hOwn->iisFrameIT = 0;
             } else {
-                for (int i = 0; i < GV->editState->SprBank->GetAssetsCount(); i++)
+                for (int i = 0; i < GV->editState->SprBank->getNumberOfElements(); i++)
                     if (GV->editState->SprBank->GetAssetByIterator(i) == m_hOwn->asImageSetPick) {
                         m_hOwn->iisPickIT = i;
                         break;
@@ -307,7 +307,7 @@ namespace State {
                 int move = (z ? m_hOwn->sliisFrame->getValue() : m_hOwn->sliisPick->getValue());
                 int istart = move / 138.0f;
                 int iend = std::min(istart + 7, (z ? m_hOwn->asImageSetPick->GetSpritesCount()
-                                                   : GV->editState->SprBank->GetAssetsCount()));
+                                                   : GV->editState->SprBank->getNumberOfElements()));
                 hge->Gfx_SetClipping(dx + 5, (z ? dy + 233 : dy + 25), w - 10, 163);
                 if (mx > dx + 5 && mx < dx + w - 5 && my > (z ? dy + 233 : dy + 25) &&
                     my < (z ? dy + 233 : dy + 25) + 163) {
@@ -1401,7 +1401,7 @@ namespace State {
         window->add(vpisPick, 0, 0);
         winisPick->add(vpisPick, 0, 0);
 
-        sliisPick = new SHR::Slider(0, GV->editState->SprBank->GetAssetsCount() * 138 - 790);
+        sliisPick = new SHR::Slider(0, GV->editState->SprBank->getNumberOfElements() * 138 - 790);
         sliisPick->setDimension(gcn::Rectangle(0, 0, 793, 16));
         sliisPick->setOrientation(SHR::Slider::HORIZONTAL);
         sliisPick->setStepLength(138 * 2);

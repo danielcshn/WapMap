@@ -579,6 +579,15 @@
     <ClCompile Include="windows\newMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="databanks\meta.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="databanks\palettes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\paletteBrowser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bodyQuadTree.h">
@@ -1011,6 +1020,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="states\dialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="databanks\meta.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="databanks\palettes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\paletteBrowser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

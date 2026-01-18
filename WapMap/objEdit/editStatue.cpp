@@ -2,6 +2,7 @@
 #include "../langID.h"
 #include "../states/editing_ww.h"
 #include "winInventoryPickbox.h"
+#include "../cObjectUserData.h"
 
 namespace ObjEdit {
     std::string lmEditObjStatueDurability::getElementAt(int i) {
@@ -84,6 +85,8 @@ namespace ObjEdit {
         int z = hTempObj->GetParam(WWD::Param_LocationZ);
         if (!z) {
             hTempObj->SetParam(WWD::Param_LocationZ, 1100);
+			GetUserDataFromObj(hTempObj)->SetZ(z);
+			hState->vPort->MarkToRedraw();
         }
 
         alignment = 2;
@@ -256,16 +259,22 @@ namespace ObjEdit {
         } else if (actionEvent.getSource() == rbType[0]) {
             hTempObj->SetLogic("BehindStatue");
             hTempObj->SetParam(WWD::Param_LocationZ, 1010);
+			GetUserDataFromObj(hTempObj)->SetZ(1010);
             tfCustomZ->setEnabled(false);
+			hState->vPort->MarkToRedraw();
         } else if (actionEvent.getSource() == rbType[1]) {
             hTempObj->SetLogic("FrontStatue");
             hTempObj->SetParam(WWD::Param_LocationZ, 5000);
+			GetUserDataFromObj(hTempObj)->SetZ(5000);
             tfCustomZ->setEnabled(false);
+			hState->vPort->MarkToRedraw();
         } else if (actionEvent.getSource() == rbType[2]) {
             int z = std::atoi(tfCustomZ->getText().c_str());
             hTempObj->SetLogic(z < 4000 ? "BehindStatue" : "FrontStatue");
             hTempObj->SetParam(WWD::Param_LocationZ, z);
+			GetUserDataFromObj(hTempObj)->SetZ(z);
             tfCustomZ->setEnabled(true);
+			hState->vPort->MarkToRedraw();
         } else if (actionEvent.getSource() == ddDurability) {
             if (ddDurability->getSelected() == 0)
                 hTempObj->SetParam(WWD::Param_Health, 1);
@@ -300,6 +309,8 @@ namespace ObjEdit {
             if (!z) z = 1100;
             hTempObj->SetLogic(z < 4000 ? "BehindStatue" : "FrontStatue");
             hTempObj->SetParam(WWD::Param_LocationZ, z);
+			GetUserDataFromObj(hTempObj)->SetZ(z);
+			hState->vPort->MarkToRedraw();
         } else {
             for (auto &invTab: invTabs)
                 if (actionEvent.getSource() == invTab) {

@@ -1,12 +1,7 @@
 #ifndef H_C_SNDBANK
 #define H_C_SNDBANK
 
-#include <vector>
 #include <hge.h>
-#include "../shared/cREZ.h"
-#include "../shared/cProgressInfo.h"
-#include <sys/types.h>
-#include <guichan/listModel.hpp>
 #include "../cDataController.h"
 
 class cSndBankAsset : public cAsset {
@@ -15,59 +10,39 @@ protected:
 
     cSndBankAsset(cFile hFile, std::string id);
 
-    ~cSndBankAsset();
-
     friend class cBankSound;
 
 public:
+    ~cSndBankAsset() override;
 
-    virtual void Load();
+    void Load() override;
 
-    virtual void Unload();
+    void Unload() override;
 
     HEFFECT GetSound() { return m_snd; };
-
-    virtual std::string GetMountPoint();
 };
 
-class cBankSound : public gcn::ListModel, public cAssetBank {
-private:
-    std::vector<cSndBankAsset *> m_vAssets;
-    bool bBatchProcessing;
-    int iBatchPackageCount;
-
+class cBankSound : public cAssetBank<cSndBankAsset> {
 public:
-    cBankSound(WWD::Parser *hParser);
-
-    ~cBankSound();
+    explicit cBankSound(cDataController *hDC) : cAssetBank<cSndBankAsset>(hDC) {}
 
     cSndBankAsset *GetAssetByID(const char *pszID);
 
-    cSndBankAsset *GetAssetByIterator(int iIT) {
-        if (iIT < 0 || iIT >= m_vAssets.size()) return NULL;
-        return m_vAssets[iIT];
-    }
-
-    int GetAssetsCount() { return m_vAssets.size(); };
-
-    //inherited
-    std::string getElementAt(int i);
-
-    int getNumberOfElements();
-
     void SortAssets();
 
-    virtual void BatchProcessStart(cDataController *hDC);
+    void BatchProcessStart() override;
+    void BatchProcessEnd() override;
 
-    virtual void BatchProcessEnd(cDataController *hDC);
-
-    virtual void ProcessAssets(cAssetPackage *hClientAP, std::vector<cFile> vFiles);
+    cSndBankAsset *AllocateAssetForMountPoint(cDC_MountEntry mountEntry) override;
+    std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) override;
 
     const std::string& GetFolderName() override {
         static const std::string name = "SOUNDS";
         static const std::string namez = "SOUNDZ";
-        return hParser->GetGame() == WWD::Game_Gruntz ? namez : name;
+        return hDC->GetGame() == WWD::Game_Gruntz ? namez : name;
     };
+
+    void DeleteAsset(cSndBankAsset *hAsset) override;
 };
 
 #endif

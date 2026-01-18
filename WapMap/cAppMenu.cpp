@@ -129,9 +129,8 @@ cAppMenu::cAppMenu() {
     workcon->AddElement(APPMEN_ASSETS_ANIMS, GETL2S("AppMenu", "Assets_Anims"), GV->sprIcons16[Icon16_Animation]);
     workcon->AddElement(APPMEN_ASSETS_SOUNDS, GETL2S("AppMenu", "Assets_Sounds"), GV->sprIcons16[Icon16_Sound]);
     workcon->AddElement(APPMEN_ASSETS_LOGICS, GETL2S("AppMenu", "Assets_Logics"), GV->sprIcons16[Icon16_Code]);
+    workcon->AddElement(APPMEN_ASSETS_PALETTES, GETL2S("AppMenu", "Assets_Palettes"), GV->sprIcons16[Icon16_Brush]);
     workcon->adjustSize();
-    workcon->GetElementByID(APPMEN_ASSETS_ANIMS)->SetEnabled(0);
-    workcon->GetElementByID(APPMEN_ASSETS_SOUNDS)->SetEnabled(0);
 
     workcon = hEntries[AppMenu_WapMap]->GetContext();
     workcon->AddElement(APPMEN_WM_SETTINGS, GETL2S("AppMenu", "About_Settings"), GV->sprIcons16[Icon16_Settings]);
@@ -649,6 +648,8 @@ void cAppMenu::action(const gcn::ActionEvent &actionEvent) {
                                                         (hge->System_GetState(HGE_SCREENHEIGHT) - GV->editState->winLogicBrowser->getHeight()) / 2);
             GV->editState->winLogicBrowser->setVisible(true);
             GV->editState->conMain->moveToTop(GV->editState->winLogicBrowser);
+        } else if (id == APPMEN_ASSETS_PALETTES) {
+            GV->editState->hwinPaletteBrowser->Open();
         } else {
             GV->editState->winDB->setVisible(true);
             GV->editState->conMain->moveToTop(GV->editState->winDB);

@@ -2,8 +2,8 @@
 #define VERSION_H
 
 #define MAJOR_VERSION 0
-#define MINOR_VERSION 4
-#define PATCH_VERSION 3
+#define MINOR_VERSION 5
+#define PATCH_VERSION 0
 #define WA_VER 39
 
 #define PRODUCT_NAME "WapMap"

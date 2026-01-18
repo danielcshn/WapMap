@@ -309,11 +309,13 @@ void State::EditingWW::Init() {
     hwinTileBrowser = new winTileBrowser();
     hwinImageSetBrowser = new winImageSetBrowser();
     hwinAbout = new winAbout();
+    hwinPaletteBrowser = new winPaletteBrowser();
     hWindows.push_back(hwinNewMap);
     hWindows.push_back(hwinOptions);
     hWindows.push_back(hwinTileBrowser);
     hWindows.push_back(hwinImageSetBrowser);
     hWindows.push_back(hwinAbout);
+    hWindows.push_back(hwinPaletteBrowser);
 
     for (auto & hWindow : hWindows) {
         SHR::Win *win = hWindow->GetWindow();
@@ -2370,6 +2372,7 @@ void State::EditingWW::GainFocus(ReturnCode<void> code, bool bFlipped) {
                 hAniBank = dd->hAniBank;
                 hDataCtrl = dd->hDataCtrl;
                 hCustomLogics = dd->hCustomLogicBank;
+                hPalettesBank = dd->hPalettesBank;
                 //delete md;
                 if (MDI->GetActiveDoc() != NULL) {
                     PrepareForDocumentSwitch();
@@ -3085,7 +3088,7 @@ void State::EditingWW::SyncLogicBrowser() {
     if (validSelect) {
         if (!bLogicBrowserExpanded) ExpandLogicBrowser();
 
-        cCustomLogic *logic = hCustomLogics->GetLogicByIterator(lbbrlLogicList->getSelected());
+        cCustomLogic *logic = hCustomLogics->GetAssetByIterator(lbbrlLogicList->getSelected());
         cFile f = logic->GetFile();
         labbrlLogicNameV->setCaption(logic->GetName());
         std::string path = logic->GetPath();
@@ -3175,6 +3178,7 @@ void State::EditingWW::DocumentSwitched() {
     hSndBank = MDI->GetActiveDoc()->hSndBank;
     hAniBank = MDI->GetActiveDoc()->hAniBank;
     hCustomLogics = MDI->GetActiveDoc()->hCustomLogicBank;
+    hPalettesBank = MDI->GetActiveDoc()->hPalettesBank;
     hDataCtrl = MDI->GetActiveDoc()->hDataCtrl;
     hPlaneData = MDI->GetActiveDoc()->hPlaneData;
     fZoom = MDI->GetActiveDoc()->fZoom;

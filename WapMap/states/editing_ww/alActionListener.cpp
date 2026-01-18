@@ -26,7 +26,7 @@ namespace State {
         if (actionEvent.getSource() == m_hOwn->winLogicBrowser) {
             //m_hOwn->SyncLogicBrowser();
         } else if (actionEvent.getSource() == m_hOwn->butbrlRename) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             const auto& ret = State::InputDialog(PRODUCT_NAME, GETL2S("Win_LogicBrowser", "DialogInputName"), ST_DIALOG_BUT_OKCANCEL, logic->GetName());
             if (ret.value == RETURN_OK) {
                 if (ret.data.empty()) {
@@ -57,7 +57,7 @@ namespace State {
                 }
             }
         } else if (actionEvent.getSource() == m_hOwn->butbrlBrowseDir) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             std::filesystem::path path = logic->GetPath();
             path.remove_filename();
             ShellExecute(hge->System_GetState(HGE_HWND), "explore", "", "", path.generic_string().c_str(), SW_SHOWNORMAL);
@@ -81,10 +81,10 @@ namespace State {
                 }
             }
         } else if (actionEvent.getSource() == m_hOwn->butbrlEdit) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             m_hOwn->hDataCtrl->OpenCodeEditor(logic);
         } else if (actionEvent.getSource() == m_hOwn->butbrlDelete) {
-            cCustomLogic *logic = m_hOwn->hCustomLogics->GetLogicByIterator(m_hOwn->lbbrlLogicList->getSelected());
+            cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
             std::string path = logic->GetPath();
             if (GV->fntMyriad16->GetStringWidth(path.c_str()) > 345) {
                 do {

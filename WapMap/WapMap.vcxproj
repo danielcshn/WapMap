@@ -18,24 +18,24 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{EE341A77-D262-4FB3-899D-E89DCE97EEB6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -309,6 +309,8 @@
     <ClCompile Include="databanks\anims.cpp" />
     <ClCompile Include="databanks\imageSets.cpp" />
     <ClCompile Include="databanks\logics.cpp" />
+    <ClCompile Include="databanks\meta.cpp" />
+    <ClCompile Include="databanks\palettes.cpp" />
     <ClCompile Include="databanks\sounds.cpp" />
     <ClCompile Include="databanks\tiles.cpp" />
     <ClCompile Include="funcConsole.cpp" />
@@ -375,6 +377,7 @@
     <ClCompile Include="windows\imgsetBrowser.cpp" />
     <ClCompile Include="windows\newMap.cpp" />
     <ClCompile Include="windows\options.cpp" />
+    <ClCompile Include="windows\paletteBrowser.cpp" />
     <ClCompile Include="windows\tileBrowser.cpp" />
     <ClCompile Include="wViewport.cpp" />
   </ItemGroup>
@@ -464,6 +467,8 @@
     <ClInclude Include="databanks\anims.h" />
     <ClInclude Include="databanks\imageSets.h" />
     <ClInclude Include="databanks\logics.h" />
+    <ClInclude Include="databanks\meta.h" />
+    <ClInclude Include="databanks\palettes.h" />
     <ClInclude Include="databanks\sounds.h" />
     <ClInclude Include="databanks\tiles.h" />
     <ClInclude Include="funcConsole.h" />
@@ -520,6 +525,7 @@
     <ClInclude Include="windows\about.h" />
     <ClInclude Include="windows\imgsetBrowser.h" />
     <ClInclude Include="windows\options.h" />
+    <ClInclude Include="windows\paletteBrowser.h" />
     <ClInclude Include="windows\tileBrowser.h" />
     <ClInclude Include="windows\window.h" />
     <ClInclude Include="wViewport.h" />

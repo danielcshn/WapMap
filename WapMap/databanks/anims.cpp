@@ -1,96 +1,122 @@
 #include "anims.h"
 #include "../shared/commonFunc.h"
 #include "../globals.h"
+#include "../../shared/cProgressInfo.h"
+#include "../cParallelLoop.h"
 
+extern structProgressInfo _ghProgressInfo;
 extern HGE *hge;
 
 bool cAniBank_SortAssets(cAniBankAsset *a, cAniBankAsset *b) {
     return (std::string(a->GetID()) < std::string(b->GetID()));
 }
 
-cBankAni::cBankAni() {
-    hREZ = 0;
-}
-
-cBankAni::~cBankAni() {
-    for (int i = 0; i < m_vAssets.size(); i++) {
-        delete m_vAssets[i];
-        m_vAssets[i] = 0;
-    }
-}
-
-void cBankAni::LoadDirRecursive(REZ::Dir *dir, const char *pszPrefix) {
-    for (int i = 0; i < dir->GetElementsCount(); i++) {
-        if (dir->GetElement(i)->IsFile()) {
-            REZ::File *el = (REZ::File *) dir->GetElement(i);
-            char *ext = SHR::GetExtension(el->GetName());
-            char *extl = SHR::ToLower(ext);
-            if (!strcmp(extl, "ani")) {
-                char *filename = SHR::GetFileWithoutExt(el->GetName());
-                char *id = new char[strlen(filename) + strlen(pszPrefix) + 2];
-                sprintf(id, "%s_%s", pszPrefix, filename);
-                Load(el, id);
-                delete[] id;
-                delete[] filename;
-            }
-            delete[] extl;
-            delete[] ext;
-        } else if (dir->GetElement(i)->IsDir()) {
-            REZ::Dir *el = (REZ::Dir *) dir->GetElement(i);
-            char *prefix = new char[strlen(pszPrefix) + strlen(el->GetName()) + 2];
-            sprintf(prefix, "%s_%s", pszPrefix, el->GetName());
-            LoadDirRecursive(el, prefix);
-            delete[] prefix;
-        }
-    }
-}
-
-void cBankAni::Load(REZ::File *file, const char *pszID) {
-    //GV->Console->Printf("---------%s\n", pszID);
-    cAniBankAsset *as = new cAniBankAsset();
-    as->m_szID = new char[strlen(pszID) + 1];
-    strcpy(as->m_szID, pszID);
-
-    void *ptr;
-    int len;
-    ptr = file->GetData(&len);
-    as->m_hAni = new ANI::Animation(ptr, len);
+void cAniBankAsset::Load() {
+    unsigned int len;
+    unsigned char *ptr = GetFile().hFeed->GetFileContent(GetFile().strPath.c_str(), len);
+    if (len == 0) return;
+    m_hAni = new ANI::Animation(ptr, len);
     delete[] ptr;
-    if (!as->m_hAni->Valid()) {
-        GV->Console->Printf("~r~Anim ~y~%s ~r~invalid!", pszID);
-        delete as;
-        return;
-    }
-    m_vAssets.push_back(as);
+    _bLoaded = 1;
+}
+
+void cAniBankAsset::Unload() {
+    delete m_hAni;
+    _bLoaded = 0;
 }
 
 cAniBankAsset *cBankAni::GetAssetByID(const char *pszID) {
-    for (int i = 0; i < m_vAssets.size(); i++) {
-        if (!strcmp(m_vAssets[i]->m_szID, pszID)) {
-            return m_vAssets[i];
+    for (auto & m_vAsset : m_vAssets) {
+        if (!strcmp(m_vAsset->m_szID.c_str(), pszID)) {
+            return m_vAsset;
         }
     }
     return NULL;
 }
 
-cAniBankAsset::cAniBankAsset() {
-    m_szID = 0;
+cAniBankAsset::cAniBankAsset(cFile hFile, std::string id) {
+    SetFile(hFile);
+    m_szID = id;
 }
 
 cAniBankAsset::~cAniBankAsset() {
-    delete m_hAni;
-    delete[] m_szID;
-}
-
-std::string cBankAni::getElementAt(int i) {
-    if (i < 0 || i >= m_vAssets.size()) return "";
-    return m_vAssets[i]->GetID();
-}
-
-int cBankAni::getNumberOfElements() {
-    return m_vAssets.size();
+    if (_bLoaded) {
+        delete m_hAni;
+    }
 }
 
 void cBankAni::SortAssets() {
     sort(m_vAssets.begin(), m_vAssets.end(), cAniBank_SortAssets);
+}
+void cBankAni::BatchProcessStart() {
+    // bBatchProcessing = 1;
+    GV->Console->Printf("Loading animations...");
+    _ghProgressInfo.iGlobalProgress = 7;
+    _ghProgressInfo.strGlobalCaption = "Loading animations...";
+    _ghProgressInfo.strDetailedCaption = "Scanning animations...";
+    _ghProgressInfo.iDetailedProgress = 0;
+    _ghProgressInfo.iDetailedEnd = 100000;
+    // iBatchPackageCount = 0;
+}
+
+void cBankAni::BatchProcessEnd() {
+    _ghProgressInfo.iDetailedProgress = 50000;
+    _ghProgressInfo.iDetailedEnd = 100000;
+    _ghProgressInfo.strDetailedCaption = "Sorting...";
+    SortAssets();
+    if (hDC->GetLooper())
+        hDC->GetLooper()->Tick();
+    for (size_t i = 0; i < m_vAssets.size(); i++) {
+        char buf[256];
+        sprintf(buf, "Loading: %s [%d/%d]", m_vAssets[i]->GetName(), i, m_vAssets.size());
+        _ghProgressInfo.strDetailedCaption = buf;
+        _ghProgressInfo.iDetailedProgress = 50000 + (float(i) / float(m_vAssets.size())) * 50000.0f;
+        if (hDC->GetLooper() != 0)
+            hDC->GetLooper()->Tick();
+        m_vAssets[i]->Load();
+    }
+    // bBatchProcessing = false;
+}
+
+cAniBankAsset * cBankAni::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) {
+    std::string aniMountPoint(mountEntry.strMountPoint.c_str() + 6);
+    aniMountPoint.resize(aniMountPoint.length() - 4);
+
+    std::ranges::transform(aniMountPoint, aniMountPoint.begin(), ::toupper);
+    do {
+        const size_t slash = aniMountPoint.find('/');
+        if (slash == std::string::npos) break;
+        aniMountPoint[slash] = '_';
+    } while (true);
+
+    cAniBankAsset *as = GetAssetByID(aniMountPoint.c_str());
+    if (!as && !mountEntry.vFiles.empty()) {
+        as = new cAniBankAsset(mountEntry.vFiles[0], aniMountPoint);
+        m_vAssets.push_back(as);
+    }
+
+    return as;
+}
+
+std::string cBankAni::GetMountPointForFile(std::string strFilePath, std::string strPrefix) {
+    const char* ext = strFilePath.c_str() + strFilePath.length() - 3;
+    if (!(
+        (ext[0] == 'a' || ext[0] == 'A')
+        && (ext[1] == 'n' || ext[1] == 'N')
+        && (ext[2] == 'i' || ext[2] == 'I')
+    )) {
+        return "";
+    }
+
+    return "/" + GetFolderName() + "/" + strPrefix + "/" + strFilePath;
+}
+
+void cBankAni::DeleteAsset(cAniBankAsset *hAsset) {
+    for (size_t i = 0; i < m_vAssets.size(); i++) {
+        if (m_vAssets[i] == hAsset) {
+            m_vAssets.erase(m_vAssets.begin() + i);
+            break;
+        }
+    }
+    delete hAsset;
 }

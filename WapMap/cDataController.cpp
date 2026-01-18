@@ -14,7 +14,7 @@ cDataController *_ghDataController = 0;
 
 bool _cDC_SortMountEntry(cFile a, cFile b) {
     int pria = _ghDataController->GetFeedPriority(a.hFeed),
-            prib = _ghDataController->GetFeedPriority(b.hFeed);
+        prib = _ghDataController->GetFeedPriority(b.hFeed);
     if (pria != prib)
         return pria > prib;
     return a.strPath < b.strPath;
@@ -24,7 +24,7 @@ bool _cDC_SortMountEntries(cDC_MountEntry a, cDC_MountEntry b) {
     return (a.strMountPoint < b.strMountPoint);
 }
 
-cDataController::cDataController(WWD::GAME game, std::string strGD, std::string strFD, std::string strFN) : game(game) {
+cDataController::cDataController(WWD::Parser* hParser, std::string strGD, std::string strFD, std::string strFN) : hParser(hParser) {
     hLooper = 0;
     strGameDir = strGD;
     strFileDir = strFD;
@@ -39,7 +39,7 @@ cDataController::cDataController(WWD::GAME game, std::string strGD, std::string 
     }
 
     std::string tmp = strGameDir;
-    switch (game) {
+    switch (hParser->GetGame()) {
         case WWD::Game_Claw:
         case WWD::Game_Claw2:
             tmp.append("/CLAW.REZ");
@@ -111,15 +111,6 @@ cFileFeed *cDataController::GetFeed(int i) {
     return 0;
 }
 
-cAsset::cAsset() {
-    _iLoadedDate = _iLastDate = _iFileSize = 0;
-    hParent = 0;
-}
-
-cAsset::~cAsset() {
-
-}
-
 void cAsset::Reload() {
     Unload();
     Load();
@@ -162,36 +153,36 @@ void cDataController::DeletePackage(cAssetPackage *ptr) {
     delete ptr;
 }
 
-bool cDataController::SetPalette(std::string strPath) {
-    unsigned char *data;
-    unsigned int len;
-    cFileFeed *feed = 0;
-    if (hDisc != 0 && hDisc->FileExists(strPath.c_str())) {
-        feed = hDisc;
-    } else {
-        if (hREZ == 0)
-            return 0;
-        bool ex = hREZ->FileExists(strPath.c_str());
-        if (!ex) return 0;
-        feed = hREZ;
-    }
-    data = feed->GetFileContent(strPath.c_str(), len);
-    if (len != 768) {
-        delete[] data;
-        return 0;
-    }
-    if (hPalette != 0)
-        delete hPalette;
-    hPalette = new PID::Palette(data, len);
-    delete[] data;
-    return 1;
-}
-
-void cDataController::RegisterAssetBank(cAssetBank *hPtr) {
-    vhBanks.push_back(hPtr);
-    hPtr->_bModFlag = 0;
-    hPtr->_iModNew = hPtr->_iModChange = hPtr->_iModDel = 0;
-}
+// bool cDataController::SetPalette(std::string strPath, bool custom) {
+//     unsigned char *data;
+//     unsigned int len;
+//     cFileFeed *feed = 0;
+//     if (hDisc != 0 && hDisc->FileExists(strPath.c_str())) {
+//         feed = hDisc;
+//     } else {
+//         if (hREZ == 0)
+//             return 0;
+//         bool ex = hREZ->FileExists(strPath.c_str());
+//         if (!ex) return 0;
+//         feed = hREZ;
+//     }
+//     data = feed->GetFileContent(strPath.c_str(), len);
+//     if (len != 768) {
+//         delete[] data;
+//         return 0;
+//     }
+//     if (custom) {
+//         if (hCustomPalette != 0)
+//             delete hCustomPalette;
+//         hCustomPalette = new PID::Palette(data, len);
+//     } else {
+//         if (hPalette != 0)
+//             delete hPalette;
+//         hPalette = new PID::Palette(data, len);
+//     }
+//     delete[] data;
+//     return 1;
+// }
 
 byte *cDataController::GetImageRaw(cFile hFile, int *pW, int *pH, PID::Palette** pal) {
     byte *ret = 0;
@@ -280,19 +271,18 @@ bool cDataController::RenderImageRaw(byte *hData, HTEXTURE texDest, int iRx, int
     DWORD *td = hge->Texture_Lock(texDest, 0, iRx, iRy, w, h);
     if (!td)
         return 0;
-    PID::Palette *palptr = (pal == 0 ? hPalette
-                                     : pal);
-    bool useColorKey = game != WWD::Game_Claw;
+    if (!pal) pal = GetPalette();
+    bool useColorKey = hParser->GetGame() != WWD::Game_Claw;
     if (useColorKey) {
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++) {
-                DWORD color = palptr->GetColor(hData[y * w + x]);
+                DWORD color = pal->GetColor(hData[y * w + x]);
                 td[y * iRowSpan + x] = (color == 0xFFFF0084 ? 0x00FFFFFF : color);
             }
     } else {
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++) {
-                td[y * iRowSpan + x] = (hData[y * w + x] == 0 ? 0x00FFFFFF : palptr->GetColor(hData[y * w + x]));
+                td[y * iRowSpan + x] = (hData[y * w + x] == 0 ? 0x00FFFFFF : pal->GetColor(hData[y * w + x]));
             }
     }
     hge->Texture_Unlock(texDest);
@@ -489,28 +479,16 @@ std::vector<cFile> cDataController::GetFilesList(std::string strPath, int iLoadP
     return vR;
 }
 
-cAssetPackage::cAssetPackage(cDataController *parent) {
-    hParent = parent;
-}
-
-cAssetPackage::~cAssetPackage() {
-    /*for(int x=0;x<vSets.size();x++){
-     for(int y=0;y<vSets[x].vAssets.size();y++){
-      delete vSets[x].vAssets[y];
-     }
-    }*/
-}
-
 void cDataController::UpdateAllPackages() {
     for (auto & vhBank : vhBanks) {
-        vhBank->BatchProcessStart(this);
+        vhBank->BatchProcessStart();
         if (GetLooper()) GetLooper()->Tick();
         for (auto & vhPackage : vhPackages) {
             vhPackage->Update(vhBank);
         }
         for (auto & vMountEntry : vMountEntries) {
             if (!vMountEntry.hAsset && !strncmp(vhBank->GetFolderName().c_str(), vMountEntry.strMountPoint.c_str() + 1, vhBank->GetFolderName().length())) {
-                cAsset *as = vhBank->AllocateAssetForMountPoint(this, vMountEntry);
+                cAsset *as = vhBank->AllocateAssetForMountPoint(vMountEntry);
                 if (!as)
                     GV->Console->Printf("~r~Error loading asset for mount point ~y~%s~r~!",
                                         vMountEntry.strMountPoint.c_str());
@@ -520,39 +498,39 @@ void cDataController::UpdateAllPackages() {
                 }
             }
         }
-        vhBank->BatchProcessEnd(this);
+        vhBank->BatchProcessEnd();
         if (GetLooper() != 0)
             GetLooper()->Tick();
     }
 }
 
-cAssetPackage *cDataController::GetAssetPackageByFile(cFile hFile) {
+cAssetPackage *cDataController::GetAssetPackageByFile(const cFile& hFile) {
     if (hFile.hFeed == hCustom) {
-        for (size_t i = 0; i < vhPackages.size(); i++)
-            if (vhPackages[i]->GetLoadPolicy() == cDC_CUSTOM)
-                return vhPackages[i];
+        for (auto & vhPackage : vhPackages)
+            if (vhPackage->GetLoadPolicy() == cDC_CUSTOM)
+                return vhPackage;
     }
 
     std::string fdir = hFile.strPath.substr(0, hFile.strPath.find('/'));
-    std::transform(fdir.begin(), fdir.end(), fdir.begin(), ::toupper);
-    for (size_t i = 0; i < vhPackages.size(); i++) {
-        if (fdir.compare(vhPackages[i]->GetPath()) == 0)
-            return vhPackages[i];
+    std::ranges::transform(fdir, fdir.begin(), ::toupper);
+    for (auto & package : vhPackages) {
+        if (fdir == package->GetPath())
+            return package;
     }
     return 0;
 }
 
-void cAssetPackage::Update(cAssetBank *hBank) {
+void cAssetPackage::Update(cAssetBank<cAsset> *hBank) {
     if (hBank == 0) {
-        std::vector<cAssetBank *> vBanks = hParent->GetBanks();
-        for (int i = 0; i < vBanks.size(); i++) {
-            Update(vBanks[i]);
+        std::vector<cAssetBank<cAsset> *> vBanks = hParent->GetBanks();
+        for (auto & vBank : vBanks) {
+            Update(vBank);
         }
         return;
     }
 
-    std::string strSetPath("");
-    if (strPath.length() > 0) {
+    std::string strSetPath;
+    if (!strPath.empty()) {
         strSetPath = strPath;
         strSetPath.append("/");
         strSetPath.append(hBank->GetFolderName());
@@ -564,15 +542,15 @@ void cAssetPackage::Update(cAssetBank *hBank) {
     if (GetParent()->GetLooper() != 0)
         GetParent()->GetLooper()->Tick();
     std::vector<cFile> vFiles = hParent->GetFilesList(strSetPath, iLoadPolicy);
-    if (vFiles.size() == 0) return;
-    for (size_t i = 0; i < vFiles.size(); i++) {
-        std::string strmntpath = hBank->GetMountPointForFile(vFiles[i].strPath, GetPrefix());
+
+    for (auto & vFile : vFiles) {
+        std::string strmntpath = hBank->GetMountPointForFile(vFile.strPath, GetPrefix());
         if (!strmntpath.empty()) {
             std::string n = strSetPath;
             n.append("/");
-            n.append(vFiles[i].strPath);
-            vFiles[i].strPath = n;
-            hParent->MountFile(strmntpath, vFiles[i]);
+            n.append(vFile.strPath);
+            vFile.strPath = n;
+            hParent->MountFile(strmntpath, vFile);
         }
     }
 }
@@ -584,7 +562,7 @@ void cAssetPackage::RegisterAsset(cAsset *hPtr) {
 void cDataController::UnmountFile(std::string strMountPoint, cFile hFile) {
     std::transform(strMountPoint.begin(), strMountPoint.end(), strMountPoint.begin(), ::toupper);
     for (size_t i = 0; i < vMountEntries.size(); i++)
-        if (vMountEntries[i].strMountPoint.compare(strMountPoint) == 0) {
+        if (vMountEntries[i].strMountPoint == strMountPoint) {
             for (size_t f = 0; f < vMountEntries[i].vFiles.size(); f++) {
                 if (vMountEntries[i].vFiles[f].hFeed == hFile.hFeed &&
                     vMountEntries[i].vFiles[f].strPath == hFile.strPath) {
@@ -605,13 +583,12 @@ void cDataController::UnmountFile(std::string strMountPoint, cFile hFile) {
 }
 
 bool cDataController::MountFile(std::string strMountPoint, cFile f) {
-    std::transform(strMountPoint.begin(), strMountPoint.end(), strMountPoint.begin(), ::toupper);
+    std::ranges::transform(strMountPoint, strMountPoint.begin(), ::toupper);
     for (size_t i = 0; i < vMountEntries.size(); i++)
-        if (vMountEntries[i].strMountPoint.compare(strMountPoint) == 0) {
-            for (size_t fi = 0; fi < vMountEntries[i].vFiles.size(); fi++)
-                if (vMountEntries[i].vFiles[fi].hFeed == f.hFeed &&
-                    vMountEntries[i].vFiles[fi].strPath == f.strPath)
-                    return 0;
+        if (vMountEntries[i].strMountPoint == strMountPoint) {
+            for (auto & vFile : vMountEntries[i].vFiles)
+                if (vFile.hFeed == f.hFeed && vFile.strPath == f.strPath)
+                    return false;
 
             vMountEntries[i].vFiles.push_back(f);
             //GV->Console->Printf("%d files mounted @ %s", int(vMountEntries[i].vFiles.size()), strMountPoint.c_str());
@@ -620,7 +597,7 @@ bool cDataController::MountFile(std::string strMountPoint, cFile f) {
              printf("%d", GetFeedPriority(vMountEntries[i].vFiles[z].hFeed));
              printf(": %s\n", vMountEntries[i].vFiles[z].strPath.c_str());
             }*/
-            return 0;
+            return false;
         }
     cDC_MountEntry n;
     n.vFiles.push_back(f);
@@ -628,25 +605,25 @@ bool cDataController::MountFile(std::string strMountPoint, cFile f) {
     n.strMountPoint = strMountPoint;
     vMountEntries.push_back(n);
     //GV->Console->Printf("New mount @ %s", strMountPoint.c_str());
-    return 1;
+    return true;
 }
 
 void cDataController::_SortMountEntries() {
-    std::sort(vMountEntries.begin(), vMountEntries.end(), _cDC_SortMountEntries);
+    std::ranges::sort(vMountEntries, _cDC_SortMountEntries);
 }
 
 void cDataController::_SortMountEntry(size_t id) {
     _ghDataController = this;
-    std::sort(vMountEntries[id].vFiles.begin(), vMountEntries[id].vFiles.end(), _cDC_SortMountEntry);
+    std::ranges::sort(vMountEntries[id].vFiles, _cDC_SortMountEntry);
     _ghDataController = 0;
 }
 
 void cAssetPackage::UnregisterAsset(cAsset *hPtr) {
-    cAssetBank *bank = hPtr->GetAssignedBank();
+    cAssetBank<cAsset> *bank = hPtr->GetAssignedBank();
     bank->DeleteAsset(hPtr);
 }
 
-cFile cDataController::AssignFileForLogic(std::string strLogicName) {
+cFile cDataController::AssignFileForLogic(const std::string& strLogicName) {
     cFile n;
     n.hFeed = hCustom;
     n.strPath = "logics/";
@@ -674,9 +651,9 @@ cDC_MountEntry* cDataController::GetMountEntry(const std::string& strMountPoint)
 }
 
 int cDataController::GetMountPointID(std::string strMountPoint) {
-    std::transform(strMountPoint.begin(), strMountPoint.end(), strMountPoint.begin(), ::toupper);
+    std::ranges::transform(strMountPoint, strMountPoint.begin(), ::toupper);
     for (size_t i = 0; i < vMountEntries.size(); i++)
-        if (strMountPoint.compare(vMountEntries[i].strMountPoint) == 0)
+        if (strMountPoint == vMountEntries[i].strMountPoint)
             return i;
     return -1;
 }
@@ -734,7 +711,7 @@ void cDataController::Think() {
     for (size_t i = 0; i < vhBanks.size(); i++)
         iBankNew[i] = iBankChange[i] = iBankDel[i] = 0;
 
-    bool bAddedMntPnts = 0;
+    bool bAddedMntPnts = false;
     for (int f = 0; f < 3; f++) {
         for (size_t i = 0; i < vFiles[f].size(); i++) {
             cAssetPackage *ap = GetAssetPackageByFile(vFiles[f].at(i));
@@ -746,8 +723,8 @@ void cDataController::Think() {
                     continue;
                 std::string bankidstr = strnfp.substr(0, slashpos);
                 strnfp = strnfp.substr(slashpos + 1);
-                std::transform(bankidstr.begin(), bankidstr.end(), bankidstr.begin(), ::toupper);
-                cAssetBank *bank = 0;
+                std::ranges::transform(bankidstr, bankidstr.begin(), ::toupper);
+                cAssetBank<cAsset> *bank = 0;
                 size_t bankid = 0;
                 for (size_t b = 0; b < vhBanks.size(); b++)
                     if (bankidstr == vhBanks[b]->GetFolderName()) {
@@ -764,8 +741,8 @@ void cDataController::Think() {
                 int mntid = GetMountPointID(mntpnt);
                 if (f == 0 || f == 1 && mntid == -1) {
                     if (MountFile(mntpnt, vFiles[f].at(i))) {
-                        bAddedMntPnts = 1;
-                        cAsset *as = bank->AllocateAssetForMountPoint(this, vMountEntries[vMountEntries.size() - 1]);
+                        bAddedMntPnts = true;
+                        cAsset *as = bank->AllocateAssetForMountPoint(vMountEntries[vMountEntries.size() - 1]);
                         if (!as)
                             GV->Console->Printf("~r~Error loading asset for mount point ~y~%s~r~!", mntpnt.c_str());
                         else {
@@ -811,8 +788,8 @@ void cDataController::Think() {
             vhBanks[b]->_iModDel = iBankDel[b];
         }
         if (!strMntPntToUpdate[b].empty()) {
-            vhBanks[b]->BatchProcessStart(this);
-            vhBanks[b]->BatchProcessEnd(this);
+            vhBanks[b]->BatchProcessStart();
+            vhBanks[b]->BatchProcessEnd();
         }
     }
 

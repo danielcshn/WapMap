@@ -2,7 +2,6 @@
 #define H_C_LOGICSBANK
 
 #include <vector>
-#include <guichan/listmodel.hpp>
 #include "../cDataController.h"
 
 class cCustomLogic : public cAsset {
@@ -11,16 +10,16 @@ protected:
 
     cCustomLogic(cFile hFile, std::string id);
 
-    ~cCustomLogic();
-
     void SetName(std::string n) { _strName = n; };
 
     friend class cBankLogic;
 
 public:
-    virtual void Load();
+    ~cCustomLogic() override {}
 
-    virtual void Unload();
+    void Load() override;
+
+    void Unload() override;
 
     void SetContent(std::string str);
 
@@ -33,16 +32,13 @@ public:
     std::string GetPath();
 };
 
-class cBankLogic : public gcn::ListModel, public cAssetBank {
+class cBankLogic : public cAssetBank<cCustomLogic> {
 private:
-    std::vector<cCustomLogic *> m_vAssets;
-    cCustomLogic *hGlobalScript;
-    bool selectWhenAdding;
+    cCustomLogic *hGlobalScript = 0;
+    bool selectWhenAdding = false;
 
 public:
-    cBankLogic(WWD::Parser *hParser);
-
-    ~cBankLogic();
+    explicit cBankLogic(cDataController *hDC) : cAssetBank<cCustomLogic>(hDC) {}
 
     void SetGlobalScript(cCustomLogic *h);
 
@@ -54,16 +50,6 @@ public:
 
     cCustomLogic *GetLogicByName(const char *pszID);
 
-    cCustomLogic *GetLogicByIterator(int iIT) {
-        if (iIT < 0 || iIT >= m_vAssets.size()) return NULL;
-        return m_vAssets[iIT];
-    }
-
-    //inherited
-    std::string getElementAt(int i);
-
-    int getNumberOfElements();
-
     bool RenameLogic(cCustomLogic *hLogic, const std::string& strName);
 
     void SortLogics();
@@ -71,16 +57,16 @@ public:
     const std::string& GetFolderName() override {
         static const std::string name = "LOGICS";
         static const std::string namez = "LOGICZ";
-        return hParser->GetGame() == WWD::Game_Gruntz ? namez : name;
+        return hDC->GetGame() == WWD::Game_Gruntz ? namez : name;
     };
 
-    virtual void BatchProcessStart(cDataController *hDC);
+    void BatchProcessStart() override;
 
-    virtual std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix);
+    std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) override;
 
-    virtual cAsset *AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry);
+    cCustomLogic *AllocateAssetForMountPoint(cDC_MountEntry mountEntry) override;
 
-    virtual void DeleteAsset(cAsset *hLogic) override;
+    void DeleteAsset(cCustomLogic *hLogic) override;
 };
 
 #endif

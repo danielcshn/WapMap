@@ -3,14 +3,6 @@
 
 #include "hgeSprite.h"
 #include "../cDataController.h"
-#include "guichan/listmodel.hpp"
-
-/*struct cLoadableTile
-{
- cFile hFile;
- int iID;
- std::string strSet, strFilename;
-};*/
 
 namespace WWD {
     class Parser;
@@ -32,7 +24,7 @@ protected:
 
     cTile(cImageInfo inf, int id, cTileImageSet *ts, cBankTile *bank);
 
-    ~cTile();
+    ~cTile() override;
 
     friend class cTileImageSet;
 
@@ -41,14 +33,14 @@ protected:
 public:
     int GetID() { return iID; };
 
-    virtual void Load();
+    void Load() override;
 
-    virtual void Unload();
+    void Unload() override;
 
-    virtual std::string GetMountPoint();
+    std::string GetMountPoint() override;
 };
 
-class cTileImageSet {
+class cTileImageSet : public cAsset {
 private:
     char *m_szName;
     int m_iTileMaxID;
@@ -64,7 +56,7 @@ private:
 public:
     cTileImageSet(int tileWidth, int tileHeight, const char *pszName);
 
-    ~cTileImageSet();
+    ~cTileImageSet() override;
 
     void AddTile(cTile *t);
 
@@ -92,6 +84,10 @@ public:
     void UpdateHash();
 
     std::string GetHash() { return strHash; };
+
+    void Load() override {}
+
+    void Unload() override {}
 };
 
 class cTilesetTexture {
@@ -129,52 +125,47 @@ public:
     friend class cTile;
 };
 
-class cBankTile : public cAssetBank, public gcn::ListModel {
+class cBankTile : public cAssetBank<cTileImageSet> {
 private:
     std::vector<cTilesetTexture *> vTexes;
-    std::vector<cTileImageSet *> m_vhSets;
-    bool bReloadBrushes;
+    bool bReloadBrushes = false;
 
     void SortTilesets();
 
 public:
-    cBankTile(WWD::Parser *pr);
-
-    ~cBankTile();
+    explicit cBankTile(cDataController *hDC) : cAssetBank<cTileImageSet>(hDC) {}
 
     cTile *GetTile(const char *pszSet, short piID);
 
     cTile *FindTile(short piID);
 
-    cTileImageSet *GetSet(int piID) { return m_vhSets[piID]; };
+    cTileImageSet *GetSet(int piID) { return m_vAssets[piID]; };
 
     cTileImageSet *GetSet(const char *pszSet, bool bCaseSensitive = 1);
 
-    int GetSetsCount() { return m_vhSets.size(); };
+    int GetSetsCount() { return m_vAssets.size(); };
 
-    void AddTileset(cTileImageSet *ptr) { m_vhSets.push_back(ptr); };
+    void AddTileset(cTileImageSet *ptr) { m_vAssets.push_back(ptr); };
 
     void ReloadBrushes();
 
-    virtual void DeleteAsset(cAsset *hAsset);
+    void DeleteAsset(cTileImageSet *hAsset) override;
 
     const std::string& GetFolderName() override {
         static const std::string name = "TILES";
         static const std::string namez = "TILEZ";
-        return hParser->GetGame() == WWD::Game_Gruntz ? namez : name;
+        return hDC->GetGame() == WWD::Game_Gruntz ? namez : name;
     };
 
-    virtual void BatchProcessStart(cDataController *hDC);
+    void BatchProcessStart() override;
 
-    virtual void BatchProcessEnd(cDataController *hDC);
+    void BatchProcessEnd() override;
 
-    virtual std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix);
+    std::string GetMountPointForFile(std::string strFilePath, std::string strPrefix) override;
 
-    virtual cAsset *AllocateAssetForMountPoint(cDataController *hDC, cDC_MountEntry mountEntry);
+    void RedrawAssets();
 
-    virtual std::string getElementAt(int i);
-
-    virtual int getNumberOfElements();
+    cTileImageSet *AllocateAssetForMountPoint(cDC_MountEntry mountEntry) override;
 };
 
 #endif

@@ -181,7 +181,7 @@ winImageSetBrowser::winImageSetBrowser() : cWindow(GETL2S("Win_ImageSetBrowser",
 
 void winImageSetBrowser::Think() {
     cBankImageSet *bank = GV->editState->SprBank;
-    if (bank->GetAssetsCount() == 0)
+    if (bank->getNumberOfElements() == 0)
         return;
 
     if (bank->GetModFlag()) {
@@ -198,7 +198,7 @@ void winImageSetBrowser::Think() {
 
     if (mx > 6 && mx < CONST_IMGSETBROWSER_ISLISTW - 5 && my > 45 && my < 45 + 530) {
         int tsid = (my + saImageSets->getVerticalScrollAmount() - 50) / CONST_IMGSETBROWSER_LISTSETH;
-        iHighlightedIS = (tsid < bank->GetAssetsCount() ? tsid : -1);
+        iHighlightedIS = (tsid < bank->getNumberOfElements() ? tsid : -1);
     } else
         iHighlightedIS = -1;
 
@@ -256,7 +256,6 @@ void winImageSetBrowser::Think() {
 
 void winImageSetBrowser::Draw(int piCode) {
     cBankImageSet *bank = GV->editState->SprBank;
-    cDataController *hDataCtrl = GV->editState->hDataCtrl;
     int dx, dy;
     myWin.getAbsolutePosition(dx, dy);
 
@@ -280,9 +279,9 @@ void winImageSetBrowser::Draw(int piCode) {
 
 
     hge->Gfx_SetClipping(dx + 8, dy + 51, CONST_IMGSETBROWSER_ISLISTW - 9, 520);
-    if (bank->GetAssetsCount() > 0) {
+    if (bank->getNumberOfElements() > 0) {
         int startSet = saImageSets->getVerticalScrollAmount() / CONST_IMGSETBROWSER_LISTSETH;
-        for (int i = startSet; i < bank->GetAssetsCount() &&
+        for (int i = startSet; i < bank->getNumberOfElements() &&
                                i < startSet + (saImageSets->getHeight() / CONST_IMGSETBROWSER_LISTSETH) + 2; i++) {
             int drawX = dx + 8;
             int drawY = dy + 40 + 10 + i * CONST_IMGSETBROWSER_LISTSETH - saImageSets->getVerticalScrollAmount();
@@ -355,10 +354,8 @@ void winImageSetBrowser::Draw(int piCode) {
         int tilePickX = dx + (CONST_IMGSETBROWSER_ISLISTW + 15),
             tilePickW = myWin.getWidth() - (CONST_IMGSETBROWSER_ISLISTW + 15) - 16,
             tilePickY = dy + 285, tilePickH = myWin.getHeight() - 290;
-        cSprBankAsset *tsPick = bank->GetAssetByIterator(iSelectedImageSet);
 
-        int tilesPerRow = (tilePickW / CONST_IMGSETBROWSER_FRAMEICOSIZE),
-            rowCount = tilePickH / (CONST_IMGSETBROWSER_FRAMEICOSIZE + 20) + 2;
+        int tilesPerRow = (tilePickW / CONST_IMGSETBROWSER_FRAMEICOSIZE);
         int borderOffset = (tilePickW - (tilesPerRow * CONST_IMGSETBROWSER_FRAMEICOSIZE)) / 2;
         int scroll = saFrames->getVerticalScrollAmount();
         if (scroll < 0) scroll = 0;
@@ -397,10 +394,10 @@ void winImageSetBrowser::Synchronize() {
     cBankImageSet *bank = GV->editState->SprBank;
     cDataController *hDataCtrl = GV->editState->hDataCtrl;
 
-    if (bank->GetAssetsCount() == 0)
+    if (bank->getNumberOfElements() == 0)
         return;
 
-    if (iSelectedImageSet < 0 || iSelectedImageSet >= bank->GetAssetsCount())
+    if (iSelectedImageSet < 0 || iSelectedImageSet >= bank->getNumberOfElements())
         iSelectedImageSet = 0;
     cSprBankAsset *ts = bank->GetAssetByIterator(iSelectedImageSet);
     if (iSelectedFrame < 0 || iSelectedFrame >= ts->GetSpritesCount())
@@ -517,7 +514,7 @@ void winImageSetBrowser::Synchronize() {
         hSingleGroup = &vtGroups[2];
     }
 
-    conImageSets->setHeight((bank->GetAssetsCount() * CONST_IMGSETBROWSER_LISTSETH + 10));
+    conImageSets->setHeight((bank->getNumberOfElements() * CONST_IMGSETBROWSER_LISTSETH + 10));
 
     int tperrow = (myWin.getWidth() - (CONST_IMGSETBROWSER_ISLISTW + 15) - 16) / CONST_IMGSETBROWSER_FRAMEICOSIZE;
     if (bSingleGroup) {
@@ -581,7 +578,7 @@ void winImageSetBrowser::action(const ActionEvent &actionEvent) {
         if (iSelectedImageSet != -1) {
             cSprBankAsset* ts = GV->editState->SprBank->GetAssetByIterator(iSelectedImageSet);
             cSprBankAssetIMG* fimg = ts->GetIMGByIterator(0);
-            int setsCount = GV->editState->SprBank->GetAssetsCount() - 1;
+            int setsCount = GV->editState->SprBank->getNumberOfElements() - 1;
             if (iSelectedImageSet == setsCount) {
                 --iSelectedImageSet;
             }

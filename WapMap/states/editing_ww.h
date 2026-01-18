@@ -42,6 +42,7 @@
 #include "../cRulers.h"
 #include "../cAppMenu.h"
 #include "../windows/newMap.h"
+#include "../windows/paletteBrowser.h"
 
 #ifndef byte
 typedef unsigned char byte;
@@ -818,6 +819,7 @@ namespace State {
         cBankSound *hSndBank;
         cBankAni *hAniBank;
         cBankLogic *hCustomLogics;
+        cBankPalettes *hPalettesBank;
         WWD::Object *hStartingPosObj;
         SHR::Container *conMain;
 
@@ -1067,6 +1069,7 @@ namespace State {
         winImageSetBrowser *hwinImageSetBrowser;
         winOptions *hwinOptions;
         winAbout *hwinAbout;
+        winPaletteBrowser *hwinPaletteBrowser;
 
         void TextEditMoveToNextTile(bool saving = false);
 

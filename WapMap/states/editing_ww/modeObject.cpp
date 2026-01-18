@@ -508,6 +508,7 @@ void State::EditingWW::CreateObjectWithEasyEdit(gcn::Widget *widg) {
         obj->SetLogic("PowderKeg");
         obj->SetImageSet("LEVEL_POWDERKEG");
         bDoContext = false;
+        obj->SetParam(WWD::Param_LocationZ, 4020);
     } else if (widg == hmbObject->butIconCannon) {
         if (hParser->GetBaseLevel() == 9) {
             obj->SetLogic("SkullCannon");

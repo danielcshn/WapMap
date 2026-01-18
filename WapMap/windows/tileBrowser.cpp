@@ -226,7 +226,6 @@ void winTileBrowser::Think() {
 
 void winTileBrowser::Draw(int piCode) {
     cBankTile *hTileset = GV->editState->hTileset;
-    cDataController *hDataCtrl = GV->editState->hDataCtrl;
     int dx, dy;
     myWin.getAbsolutePosition(dx, dy);
 

@@ -5,6 +5,8 @@
 #include "../../shared/gcnWidgets/wListbox.h"
 #include "../../shared/gcnWidgets/wTab.h"
 #include "../../shared/gcnWidgets/wTextDropDown.h"
+#include "../databanks/anims.h"
+#include "../states/editing_ww.h"
 
 class cBankImageSet;
 class cSprBankAsset;
@@ -14,7 +16,7 @@ namespace ObjEdit {
 
 	class WindowMouseListener;
 
-    class cEditObjCandy : public cObjEdit, gcn::ListModel, gcn::MouseListener {
+    class cEditObjCandy : public cObjEdit, gcn::MouseListener {
     private:
 		SHR::CBox *highDetail, *animated;
 		SHR::Lab *labZPos;
@@ -32,7 +34,7 @@ namespace ObjEdit {
 		enum TAB { TAB_STANDARD = 0, TAB_CUSTOM, TAB_OTHER, TABS_COUNT };
         int tabScrollPositions[TABS_COUNT] = { 0, 0, 0 };
 
-		static std::vector<std::string> AnimationsList;
+		// static std::vector<std::string> AnimationsList;
 
 		std::function<void()> updateDimensions;
 
@@ -52,10 +54,6 @@ namespace ObjEdit {
 		virtual void Draw() override;
 
 		virtual void mouseClicked(MouseEvent& mouseEvent);
-
-		std::string getElementAt(int i) { return AnimationsList[i]; }
-
-		int getNumberOfElements() { return AnimationsList.size(); }
 
 		friend class cEditCandyVP;
 		friend class cObjPropVP;

@@ -264,7 +264,13 @@ add_executable(WapMap
 	${PROJECT_SOURCE_DIR}/WapMap/windows/tileBrowser.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/wViewport.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/res.rc
-	${PROJECT_SOURCE_DIR}/WapMap/app.manifest)
+	${PROJECT_SOURCE_DIR}/WapMap/app.manifest
+		WapMap/databanks/meta.cpp
+		WapMap/databanks/meta.h
+		WapMap/databanks/palettes.cpp
+		WapMap/databanks/palettes.h
+		WapMap/windows/paletteBrowser.cpp
+		WapMap/windows/paletteBrowser.h)
 
 target_link_libraries(WapMap
     ${HGE_LIBS}
