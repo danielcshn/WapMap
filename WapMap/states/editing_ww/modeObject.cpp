@@ -685,12 +685,14 @@ void State::EditingWW::UpdateSearchResults() {
     int selectedTerm = ddObjSearchTerm->getSelected();
     if (selectedTerm == 4) { // if searching by ID
         cbObjSearchCaseSensitive->setEnabled(false);
-        int comp = std::stoi(szObjSearchBuffer);
-        /* looping cause there is nothing that prevents more than one object to have the same ID. */
-        for (int i = 0; i < GetActivePlane()->GetObjectsCount(); i++) {
-            int id = GetActivePlane()->GetObjectByIterator(i)->GetParam(WWD::Param_ID);
-            
-            if (comp == id) vObjSearchResults.emplace_back(i, id);
+        if (szObjSearchBuffer[0] >= 0x30 && szObjSearchBuffer[0] <= 0x39) {
+            int comp = std::stoi(szObjSearchBuffer);
+            /* looping cause there is nothing that prevents more than one object to have the same ID. */
+            for (int i = 0; i < GetActivePlane()->GetObjectsCount(); i++) {
+                int id = GetActivePlane()->GetObjectByIterator(i)->GetParam(WWD::Param_ID);
+                
+                if (comp == id) vObjSearchResults.emplace_back(i, id);
+            }
         }
     }
     else {
@@ -722,7 +724,7 @@ void State::EditingWW::UpdateSearchResults() {
     sliSearchObj->setValue(0);
     sliSearchObj->adjustMarkerLength();
     int winHeight = std::min(normalHeight, 550);
-    winHeight = std::max(normalHeight, 155);
+    winHeight = std::max(winHeight, 155);
     winSearchObj->setHeight(winHeight);
     if (vObjSearchResults.empty()) {
         labObjSearchResults->setCaption(GETL2S("ObjectSearch", "NoResults"));
