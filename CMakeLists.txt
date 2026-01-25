@@ -230,6 +230,7 @@ add_executable(WapMap
 	${PROJECT_SOURCE_DIR}/WapMap/objedit/editTreasure.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/objedit/editWallCannon.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/objedit/editWarp.cpp
+	${PROJECT_SOURCE_DIR}/WapMap/objedit/editLavaHand.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/objedit/procPickRect.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/objEdit/procPickXYLockable.cpp
 	${PROJECT_SOURCE_DIR}/WapMap/objedit/winInventoryPickbox.cpp
