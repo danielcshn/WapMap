@@ -45,6 +45,7 @@ enum WindowsVer {
     OS_7,
     OS_8,
     OS_10,
+    OS_11,
 };
 
 enum Gfx32Icons {

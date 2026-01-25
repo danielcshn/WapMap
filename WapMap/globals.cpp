@@ -264,6 +264,28 @@ int Console_Panic(lua_State *L) {
     return 0;
 }
 
+BOOL IsWindows11OrGreater()
+{
+    OSVERSIONINFOEX vi;
+    ULONGLONG conditions;
+
+    memset (&vi, 0, sizeof(vi));
+    vi.dwOSVersionInfoSize = sizeof(vi);
+    vi.dwMajorVersion = 10;
+    vi.dwMinorVersion = 0;
+    vi.dwBuildNumber = 21996;
+    conditions = VerSetConditionMask (0,
+            VER_MAJORVERSION, VER_GREATER_EQUAL);
+    conditions = VerSetConditionMask (conditions,
+            VER_MINORVERSION, VER_GREATER_EQUAL);
+    conditions = VerSetConditionMask (conditions,
+            VER_BUILDNUMBER, VER_GREATER_EQUAL);
+
+    return VerifyVersionInfo (&vi,
+            VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER,
+            conditions) != FALSE;
+}
+
 void cGlobals::Init() {
 #ifdef SHOWMEMUSAGE
     szMemUsage[0] = '\0';
@@ -345,8 +367,13 @@ void cGlobals::Init() {
         iOS = OS_8;
         sprintf(szNameOS, "Win8");
     } else if (dwMajorVersion == 10) {
-        iOS = OS_10;
-        sprintf(szNameOS, "Win10");
+        if (IsWindows11OrGreater()) {
+            iOS = OS_11;
+            sprintf(szNameOS, "Win11");
+        } else {
+            iOS = OS_10;
+            sprintf(szNameOS, "Win10");
+        }
     } else {
         iOS = OS_UNKNOWN;
         sprintf(szNameOS, "???");
