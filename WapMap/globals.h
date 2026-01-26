@@ -391,6 +391,8 @@ public:
 
     CSimpleIni *ini;
 
+    WWD::Object* tempObjBeingCreated;
+
     void SetLastOpenPath(const char *npath);
 
     void SetLastSavePath(const char *npath);

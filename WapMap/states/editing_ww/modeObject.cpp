@@ -177,6 +177,7 @@ bool State::EditingWW::ObjectThink(bool pbConsumed) {
             vObjectsPicked = vObjToPick;
         if (bAddNext) {
             auto *newObj = new WWD::Object(vObjectsPicked[0]);
+            GV->tempObjBeingCreated = newObj;
             newObj->SetParam(WWD::Param_LocationX, Scr2WrdX(GetActivePlane(), vPort->GetX() + vPort->GetWidth() / 2));
             newObj->SetParam(WWD::Param_LocationY, Scr2WrdY(GetActivePlane(), vPort->GetY() + vPort->GetHeight() / 2));
             GetActivePlane()->AddObjectAndCalcID(newObj);
@@ -196,6 +197,7 @@ bool State::EditingWW::ObjectThink(bool pbConsumed) {
                 GetActivePlane()->DeleteObject(object);
             }
             bEditObjDelete = false;
+            GV->tempObjBeingCreated = 0;
         }
         vPort->MarkToRedraw();
     }
@@ -464,6 +466,7 @@ const char* State::EditingWW::GetDefaultElevatorImageSet() {
 
 void State::EditingWW::CreateObjectWithEasyEdit(gcn::Widget *widg) {
     auto *obj = new WWD::Object();
+    GV->tempObjBeingCreated = obj;
     if (hmbObject->GetContext()->isVisible() && hmbObject->GetContext()->GetSelectedID() != -1) {
         obj->SetParam(WWD::Param_LocationX, Scr2WrdX(GetActivePlane(), contextX));
         obj->SetParam(WWD::Param_LocationY, Scr2WrdY(GetActivePlane(), contextY));

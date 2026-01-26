@@ -1855,19 +1855,21 @@ namespace State {
                 } else {
                     if (iActiveTool == EWW_TOOL_MOVEOBJECT) {
                         SetTool(EWW_TOOL_NONE);
-                        if ((GetUserDataFromObj(vObjectsPicked[0])->GetX() -
+                        if (vObjectsPicked[0] == GV->tempObjBeingCreated ||
+                            ((GetUserDataFromObj(vObjectsPicked[0])->GetX() -
                             vObjectsPicked[0]->GetParam(WWD::Param_LocationX)
                             || GetUserDataFromObj(vObjectsPicked[0])->GetY() -
                                vObjectsPicked[0]->GetParam(WWD::Param_LocationY))
-                            && UpdateMovedObjectWithRects(vObjectsPicked)) {
+                            && UpdateMovedObjectWithRects(vObjectsPicked))) {
                             MarkUnsaved();
                         }
                         vPort->MarkToRedraw();
                         bEditObjDelete = false;
+                        GV->tempObjBeingCreated = 0;
                     } else if (iActiveTool == EWW_TOOL_NONE) {
                         if (vObjectsPicked.size() == 1 && sameObjectClicked && mouseEvent.getClickCount() >= 2) {
                             int mwx = Scr2WrdX(GetActivePlane(), mouseEvent.getX()),
-                                    mwy = Scr2WrdY(GetActivePlane(), mouseEvent.getY());
+                                mwy = Scr2WrdY(GetActivePlane(), mouseEvent.getY());
                             std::vector<WWD::Object *> mouseObj = hPlaneData[GetActivePlaneID()]->ObjectData.hQuadTree
                                     ->GetObjectsByArea(mwx, mwy, mwx + 1, mwy + 1);
                             bool found = false;
