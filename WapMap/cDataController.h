@@ -51,7 +51,7 @@ protected:
 public:
     virtual ~cAsset() {}
 
-    const char *GetName() { return _strName.c_str(); }
+    const std::string& GetName() { return _strName; }
 
     cFile& GetFile() { return _hFile; }
 

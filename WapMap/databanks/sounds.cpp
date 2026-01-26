@@ -13,7 +13,7 @@ bool cSndBank_SortAssets(cSndBankAsset *a, cSndBankAsset *b) {
 
 cSndBankAsset *cBankSound::GetAssetByID(const char *pszID) {
     for (auto & m_vAsset : m_vAssets) {
-        if (!strcmp(m_vAsset->GetName(), pszID)) {
+        if (m_vAsset->GetName() == pszID) {
             return m_vAsset;
         }
     }
