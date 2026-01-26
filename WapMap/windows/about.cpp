@@ -47,7 +47,7 @@ void winAbout::Draw(int piCode) {
     dx += 18;
     dy += GV->sprLogoBig->GetHeight() + 64;
 
-    hge->Gfx_RenderLine(dx, dy, dx + usedLibsCreditsBlockWidth - 2, dy, GV->colLineBright);
+    hge->Gfx_RenderLine(dx, dy, dx + usedLibsCreditsBlockWidth - 2, dy, SETA(GV->colLineBright, alpha));
 
     dy += 16;
 
@@ -61,7 +61,7 @@ void winAbout::Draw(int piCode) {
                             0, GETL2S("WinAuthors", "Func_3"));
     dy += 32;
 
-    hge->Gfx_RenderLine(dx, dy, dx + usedLibsCreditsBlockWidth - 2, dy, GV->colLineBright);
+    hge->Gfx_RenderLine(dx, dy, dx + usedLibsCreditsBlockWidth - 2, dy, SETA(GV->colLineBright, alpha));
 
     dy += 16;
 

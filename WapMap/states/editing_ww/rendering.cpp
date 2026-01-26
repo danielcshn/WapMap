@@ -2450,7 +2450,7 @@ bool State::EditingWW::Render() {
         }
     }
 
-    if (fade_iAction < 2) {
+    if (fade_iAction < 3) {
         q.v[0].col = q.v[1].col = q.v[2].col = q.v[3].col = 0xFF000000;
         q.v[0].x = q.v[3].x = 0;
         q.v[0].y = q.v[1].y = LAY_MODEBAR_Y;
@@ -2460,12 +2460,12 @@ bool State::EditingWW::Render() {
 
         GV->RenderLogoWithVersion(hge->System_GetState(HGE_SCREENWIDTH) / 2, hge->System_GetState(HGE_SCREENHEIGHT) / 2);
 
-        if (fade_iAction == 0) {
+        if (fade_iAction == 1) {
             q.v[0].col = q.v[1].col = q.v[2].col = q.v[3].col = ARGB(int(fade_fAlpha), 0, 0, 0);
 
             hge->Gfx_RenderQuad(&q);
         }
-    } else if (fade_iAction == 2) {
+    } else if (fade_iAction == 3) {
         q.v[0].col = q.v[1].col = q.v[2].col = q.v[3].col = ARGB(255 - int(fade_fAlpha), 0, 0, 0);
         q.v[0].x = q.v[3].x = 0;
         q.v[0].y = q.v[1].y = LAY_MODEBAR_Y;

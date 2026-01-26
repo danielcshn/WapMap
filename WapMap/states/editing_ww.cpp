@@ -1983,31 +1983,39 @@ bool State::EditingWW::Think() {
     GV->Console->Think();
     switch (fade_iAction) {
         case 0:
+            ApplicationStartup();
+            if (GV->editState->vstrMapsToLoad.size()) {
+                fade_iAction = 4;
+            } else {
+                fade_iAction++;
+            }
+            return false;
+        case 1:
             fade_fAlpha -= hge->Timer_GetDelta() * 512;
             if (fade_fAlpha < 0) {
                 fade_iAction++;
                 fade_fAlpha = 0;
             }
             return false;
-        case 1:
+        case 2:
             fade_fTimer += hge->Timer_GetDelta();
-            if (fade_fTimer >= 0.5) {
+            if (fade_fTimer >= 0.3) {
                 fade_iAction++;
                 fade_fAlpha = 0;
             }
             return false;
-        case 2:
-            fade_fAlpha += hge->Timer_GetDelta() * 256;
+        case 3:
+            fade_fAlpha += hge->Timer_GetDelta() * 640;
             if (fade_fAlpha > 255) {
                 fade_iAction++;
-                GV->sprLogoBig->SetColor(0xFFFFFFFF);
-                GV->bWinter = false;
-                GV->sprSnowflake->SetColor(0xFFFFFFFF);
-
-                ApplicationStartup();
-            } else {
-                return false;
             }
+            return false;
+        case 4:
+            GV->sprLogoBig->SetColor(0xFFFFFFFF);
+            GV->bWinter = false;
+            GV->sprSnowflake->SetColor(0xFFFFFFFF);
+            fade_iAction++;
+            return false;
     }
 
     if (hServerIPC->Think())
