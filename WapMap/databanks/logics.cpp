@@ -66,7 +66,7 @@ void cBankLogic::RegisterLogic(cCustomLogic *h) {
 
 cCustomLogic *cBankLogic::GetLogicByName(const char *pszID) {
     for (auto & m_vAsset : m_vAssets)
-        if (!strcmp(m_vAsset->GetName(), pszID))
+        if (m_vAsset->GetName() == pszID)
             return m_vAsset;
     return 0;
 }
@@ -84,11 +84,11 @@ bool cBankLogic::RenameLogic(cCustomLogic *hLogic, const std::string& strName) {
     if (strName == "main") return false;
     cFile origFile = hLogic->GetFile();
 
-    std::string dirPath;
-    if (origFile.strPath.find_last_of("/\\") != std::string::npos)
-        dirPath = origFile.strPath.substr(0, origFile.strPath.find_last_of("/\\"));
-    std::string nFilePath = dirPath;
-    nFilePath += '/';
+    for (char* c = (char*)strName.c_str(); *c != '\0'; c++) {
+        if (*c == ':') *c = '/';
+    }
+
+    std::string nFilePath(origFile.strPath.substr(0, origFile.strPath.size() - hLogic->GetName().size() - 4));
     nFilePath += strName;
     nFilePath += ".lua";
 
@@ -118,6 +118,10 @@ bool cBankLogic::RenameLogic(cCustomLogic *hLogic, const std::string& strName) {
         } else {
             return false;
         }
+    } else {
+        std::error_code _Ec;
+        std::filesystem::path dir = absNewPath.parent_path();
+        std::filesystem::create_directories(dir, _Ec);
     }
 
     selectWhenAdding = true;
@@ -131,15 +135,30 @@ bool cBankLogic::RenameLogic(cCustomLogic *hLogic, const std::string& strName) {
 }
 
 std::string cBankLogic::GetMountPointForFile(std::string strFilePath, std::string strPrefix) {
-    return std::string("/LOGICS/") + strPrefix + strFilePath;
+    const char* ext = strFilePath.c_str() + strFilePath.length() - 3;
+    if (!(
+        (ext[0] == 'l' || ext[0] == 'L')
+        && (ext[1] == 'u' || ext[1] == 'U')
+        && (ext[2] == 'a' || ext[2] == 'A')
+    )) {
+        return "";
+    }
+
+    return std::string("/LOGICS/") + strPrefix + '/' + strFilePath;
 }
 
 cCustomLogic *cBankLogic::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) {
-    int nameStart = mountEntry.vFiles[0].strPath.find_last_of("/\\") + 1;
-    int nameEnd = mountEntry.vFiles[0].strPath.find_last_of(".");
-    std::string filename = mountEntry.vFiles[0].strPath.substr(nameStart, nameEnd - nameStart);
+    const char* start = mountEntry.strMountPoint.c_str();
+    const char* end = strchr(start + 8, '//') + 1;
+    size_t length = mountEntry.strMountPoint.size() - (end - start);
+    std::string logicName(mountEntry.vFiles[0].strPath.c_str() + mountEntry.vFiles[0].strPath.size() - length);
+    logicName.resize(logicName.size() - 4);
 
-    auto customLogic = new cCustomLogic(mountEntry.vFiles[0], filename);
+    for (char* c = (char*)logicName.c_str(); *c != '\0'; c++) {
+        if (*c == '/' || *c == '\\') { *c = ':'; }
+    }
+
+    auto customLogic = new cCustomLogic(mountEntry.vFiles[0], logicName);
     m_vAssets.push_back(customLogic);
     SortLogics();
 
@@ -154,7 +173,7 @@ cCustomLogic *cBankLogic::AllocateAssetForMountPoint(cDC_MountEntry mountEntry) 
         }
     }
 
-    if (filename == "main") {
+    if (logicName == "main") {
         hGlobalScript = customLogic;
     }
 

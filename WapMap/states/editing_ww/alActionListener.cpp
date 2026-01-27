@@ -27,11 +27,11 @@ namespace State {
             //m_hOwn->SyncLogicBrowser();
         } else if (actionEvent.getSource() == m_hOwn->butbrlRename) {
             cCustomLogic *logic = m_hOwn->hCustomLogics->GetAssetByIterator(m_hOwn->lbbrlLogicList->getSelected());
-            const auto& ret = State::InputDialog(PRODUCT_NAME, GETL2S("Win_LogicBrowser", "DialogInputName"), ST_DIALOG_BUT_OKCANCEL, logic->GetName());
+            const auto& ret = State::InputDialog(PRODUCT_NAME, GETL2S("Win_LogicBrowser", "DialogInputName"), ST_DIALOG_BUT_OKCANCEL, logic->GetName().c_str());
             if (ret.value == RETURN_OK) {
                 if (ret.data.empty()) {
                     State::MessageBox(PRODUCT_NAME, GETL2S("Win_LogicBrowser", "DialogInputNameErrorEmpty"), ST_DIALOG_ICON_ERROR);
-                } else {
+                } else if (logic->GetName() != ret.data) {
                     const std::string strOldName(logic->GetName());
                     if (m_hOwn->hCustomLogics->RenameLogic(logic, ret.data)) {
                         m_hOwn->SyncLogicBrowser();
@@ -334,7 +334,7 @@ namespace State {
                         strcpy(imgset, ani->GetImageset());
                     if (strlen(imgset) == 0) {
                         const char *id = m_hOwn->hAniBank->GetAssetByIterator(
-                                m_hOwn->dbAssetsAni->getSelected())->GetName();
+                                m_hOwn->dbAssetsAni->getSelected())->GetName().c_str();
                         char *idreplace =
                                 m_hOwn->hParser->GetGame() == WWD::Game_Gruntz ? SHR::Replace(id, "IMAGEZ_", "")
                                                                                : SHR::Replace(id, "IMAGES_", "");
@@ -1855,19 +1855,21 @@ namespace State {
                 } else {
                     if (iActiveTool == EWW_TOOL_MOVEOBJECT) {
                         SetTool(EWW_TOOL_NONE);
-                        if ((GetUserDataFromObj(vObjectsPicked[0])->GetX() -
+                        if (vObjectsPicked[0] == GV->tempObjBeingCreated ||
+                            ((GetUserDataFromObj(vObjectsPicked[0])->GetX() -
                             vObjectsPicked[0]->GetParam(WWD::Param_LocationX)
                             || GetUserDataFromObj(vObjectsPicked[0])->GetY() -
                                vObjectsPicked[0]->GetParam(WWD::Param_LocationY))
-                            && UpdateMovedObjectWithRects(vObjectsPicked)) {
+                            && UpdateMovedObjectWithRects(vObjectsPicked))) {
                             MarkUnsaved();
                         }
                         vPort->MarkToRedraw();
                         bEditObjDelete = false;
+                        GV->tempObjBeingCreated = 0;
                     } else if (iActiveTool == EWW_TOOL_NONE) {
                         if (vObjectsPicked.size() == 1 && sameObjectClicked && mouseEvent.getClickCount() >= 2) {
                             int mwx = Scr2WrdX(GetActivePlane(), mouseEvent.getX()),
-                                    mwy = Scr2WrdY(GetActivePlane(), mouseEvent.getY());
+                                mwy = Scr2WrdY(GetActivePlane(), mouseEvent.getY());
                             std::vector<WWD::Object *> mouseObj = hPlaneData[GetActivePlaneID()]->ObjectData.hQuadTree
                                     ->GetObjectsByArea(mwx, mwy, mwx + 1, mwy + 1);
                             bool found = false;

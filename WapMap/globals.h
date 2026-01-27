@@ -173,6 +173,7 @@ enum Gfx32Icons {
     Icon_Package,
     Icon_Spray,
     Icon_Zoom,
+    Icon_LavaHand,
     GfxIcons_Count
 };
 
@@ -287,6 +288,7 @@ enum Gfx16Icons {
     Icon16_Anchor,
     Icon16_Mirror,
     Icon16_Invert,
+    Icon16_LavaHand,
     Gfx16Icons_Count
 };
 
@@ -388,6 +390,8 @@ public:
     std::string szCmdLine;
 
     CSimpleIni *ini;
+
+    WWD::Object* tempObjBeingCreated;
 
     void SetLastOpenPath(const char *npath);
 
