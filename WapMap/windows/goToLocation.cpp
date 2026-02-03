@@ -121,7 +121,7 @@ winLocationsBrowser::winLocationsBrowser() : cWindow(getStr(L"WinCaption"), 250,
     butRefresh = new SHR::But(GV->hGfxInterface, getStr(L"Refresh"));
     butRefresh->setDimension(gcn::Rectangle(0, 0, 70, 28));
     butRefresh->addActionListener(this);
-    butRefresh->setIcon(GV->sprIcons16[Icon16_View]);
+    butRefresh->setIcon(GV->sprIcons16[Icon16_Refresh]);
     butRefresh->setEnabled(0);
     myWin.add(butRefresh, 170, y);
 }

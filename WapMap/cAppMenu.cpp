@@ -119,8 +119,8 @@ cAppMenu::cAppMenu() {
     workcon = hEntries[AppMenu_Navigation]->GetContext();
     workcon->AddElement(APPMEN_GO_SPAWN, GETL2S("AppMenu", "Go_Spawn"), GV->sprIcons16[Icon16_ClawHead]);
     workcon->AddElement(APPMEN_GO_PREV_WARP, GETL2S("AppMenu", "Go_Prev_Warp"), GV->sprIcons16[Icon16_Warp]);
-    workcon->AddElement(APPMEN_GO_LOCATION, GETL2S("AppMenu", "Go_Location"), GV->sprIcons16[Icon16_DownRight]);
-    workcon->AddElement(APPMEN_GO_COORDS, GETL2S("AppMenu", "Go_Coords"), GV->sprIcons16[Icon16_DownRight]);
+    workcon->AddElement(APPMEN_GO_LOCATION, GETL2S("AppMenu", "Go_Location"), GV->sprIcons16[Icon16_Location]);
+    workcon->AddElement(APPMEN_GO_COORDS, GETL2S("AppMenu", "Go_Coords"), GV->sprIcons16[Icon16_Coords]);
     workcon->adjustSize();
 
     workcon = hEntries[AppMenu_Tools]->GetContext();
